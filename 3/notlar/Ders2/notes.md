@@ -113,6 +113,22 @@ ekle(&mut s);
 Burada her seferinde **yeniden ödünç** (reborrow) alınıyor: fonksiyon dönünce ödünç
 kapanıyor, sıradaki çağrı temiz sayfayla başlıyor.
 
+## Referansın garantisi
+
+`&T` ve `&mut T` sonuçta birer **işaretçidir** — bellekte 8 bayt tutan bir adres.
+Ama safe Rust'ta geçersiz bir referans üretmek **imkânsızdır**:
+
+- Sıfır adresi (`0x0`, yani null) gösteren bir referans yazamazsınız
+- Serbest bırakılmış belleği gösteren bir referans oluşturamazsınız
+- Derleyici, referansın yaşadığı süre boyunca geçerli bir `T` nesnesini gösterdiğini
+  garanti eder
+
+Bu yüzden C'deki "önce null mı diye bakayım" refleksi Rust'ta yoktur: elinizde bir
+`&T` varsa, arkasında gerçek bir `T` vardır. Nokta.
+
+Bu garantiyi derleyiciye verdiren şey de bu dersin kurallarıdır: ödünç, verinin
+yaşadığı süreyi aşamaz.
+
 ## Sarkan referans (dangling pointer) imkânsız
 
 ```rust

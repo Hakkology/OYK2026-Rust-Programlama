@@ -122,6 +122,15 @@ fn main() {
     // ayni anda hem &mut hem & gonderilemez
     // yaz_ve_oku(&mut liste, &liste);  // E0502
 
+    // REFERANSIN GARANTISI - &T bir isaretcidir (8 bayt) ama safe Rust'ta
+    // null ya da gecersiz bir referans URETILEMEZ.
+    let deger = 7;
+    let isaretci: &i32 = &deger;
+    println!("&i32 = {} bayt, gosterdigi deger = {}",
+        std::mem::size_of::<&i32>(), isaretci);
+    // let bos: &i32 = 0;               // E0308 - referansa adres atanmaz
+    // let bos: &i32 = null;            // null diye bir sey YOK
+
     // sarkan referans imkansiz
     // let sark = sarkan();             // E0106 missing lifetime specifier
     println!("{}", sarkan_degil());

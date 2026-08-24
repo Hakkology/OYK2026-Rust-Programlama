@@ -123,17 +123,60 @@ Anahtar tipi `Eq + Hash` uygulamalı: tüm tamsayılar, `bool`, `char`, `String`
 ve bunlardan oluşan tuple'lar. `f64` **anahtar olamaz** — `NaN != NaN` olduğu için
 eşitlik tam tanımlı değil.
 
-## Kapanış: `HashSet`
+## `HashSet` — ne zaman `HashMap`, ne zaman `HashSet`?
 
-`HashSet<T>` değersiz `HashMap`'tir: sadece "bu eleman var mı" sorusuna cevap verir.
+`HashSet<T>` aslında **değeri olmayan bir `HashMap`**'tir; std'de tam olarak böyle
+yazılmıştır. Aradaki tek fark saklanan şey:
+
+| Sorduğunuz soru | Tip |
+|---|---|
+| "bu eleman daha önce geçti mi?" | `HashSet` |
+| "bu anahtarın **karşılığı** ne?" | `HashMap` |
 
 ```rust
 use std::collections::HashSet;
 
-let mut k = HashSet::new();
-k.insert("elma");
-k.insert("elma");        // ikinci ekleme false döner, küme tekrar tutmaz
-k.contains("elma");      // true
+let mut gorulen = HashSet::new();
+gorulen.insert("ali");
+gorulen.insert("ali");        // ikinci ekleme false döner, küme tekrar tutmaz
+gorulen.contains("ali");      // true
 ```
 
-Tekrarları ayıklamak, "gördüm mü" kontrolü ve kesişim/birleşim işleri için kullanılır.
+Pratik ölçüt: **değeri hiç okumuyorsanız `HashSet` istiyorsunuz demektir.** Her
+anahtara `true` yazan bir `HashMap<&str, bool>` yazdıysanız, o aslında bir kümedir.
+Tersi de geçerli: sayaç tutuyorsanız (`kelime → 3`) değeri okuyorsunuzdur, orası `HashMap`.
+
+Tipik `HashSet` işleri: tekrarları ayıklamak, "bunu daha önce gördüm mü" kontrolü,
+üyelik listesi, ziyaret edilmiş düğümler.
+Tipik `HashMap` işleri: frekans sayımı, sözlük (plaka → şehir), kullanıcı → puan,
+önbellek.
+
+### `insert` ikisinde farklı şey döndürür
+
+```rust
+kume.insert("ali");        // bool   — yeni miydi?
+harita.insert("ali", 30);  // Option — eski değer varsa Some(eski)
+```
+
+### Küme işlemleri
+
+```rust
+let a = HashSet::from([1, 2, 3]);
+let b = HashSet::from([3, 4]);
+
+a.union(&b)         // 1, 2, 3, 4   birleşim
+a.intersection(&b)  // 3            kesişim
+a.difference(&b)    // 1, 2         a'da olup b'de olmayanlar
+a.is_subset(&b)     // false
+```
+
+Bunların hepsi tembeldir; liste isterseniz `collect()` etmeniz gerekir.
+
+### Neden `Vec` değil?
+
+`Vec` üzerinde `contains` her seferinde baştan tarar — O(n). `HashSet`'te aynı soru
+ortalama O(1). Liste büyüdükçe fark açılır. Bedeli: sıra yok, elemanların hash'lenebilir
+olması gerekiyor ve her ekleme bir hash hesabı.
+
+Çok küçük listelerde (birkaç eleman) `Vec` pratikte daha hızlı kalabilir; ölçmeden
+karar vermeyin.

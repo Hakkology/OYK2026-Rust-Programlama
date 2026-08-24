@@ -120,6 +120,27 @@ fn main() {
     kume.insert("armut");
     println!("contains(elma)={} len={}", kume.contains("elma"), kume.len());
 
+    // KARAR: deger hic okunmuyorsa aslinda kume isteniyor demektir
+    let mut sozde_harita: HashMap<&str, bool> = HashMap::new();
+    sozde_harita.insert("elma", true);      // deger hep true - bosa yer
+    println!("bu bir HashMap degil, kume: {:?}", sozde_harita.contains_key("elma"));
+
+    // insert ikisinde farkli sey dondurur
+    println!("kume.insert -> {:?}", kume.insert("kiraz"));      // bool: yeni miydi
+    println!("harita.insert -> {:?}", stok.insert("elma", 99)); // Option: eski deger
+
+    // kume islemleri - hepsi tembel, liste icin collect gerekir
+    let a: HashSet<i32> = HashSet::from([1, 2, 3]);
+    let b: HashSet<i32> = HashSet::from([3, 4]);
+    let mut birlesim: Vec<&i32> = a.union(&b).collect();
+    let mut kesisim: Vec<&i32> = a.intersection(&b).collect();
+    let mut fark: Vec<&i32> = a.difference(&b).collect();
+    birlesim.sort();
+    kesisim.sort();
+    fark.sort();
+    println!("birlesim={:?} kesisim={:?} fark={:?}", birlesim, kesisim, fark);
+    println!("a, b'nin alt kumesi mi: {}", a.is_subset(&b));
+
     // tekrarlari ayiklamak icin pratik yol
     let tekrarli = vec![1, 2, 2, 3, 3, 3];
     let tekil: HashSet<i32> = tekrarli.into_iter().collect();

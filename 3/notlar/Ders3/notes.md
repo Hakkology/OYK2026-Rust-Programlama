@@ -131,8 +131,16 @@ for i in isimler {
 Üçüncüsü en sık yapılan hata: döngüden sonra listeyi kullanmaya kalkarsanız `E0382`
 alırsınız. Düzeltmesi tek karakter — `&isimler`.
 
-`iter()` / `iter_mut()` / `into_iter()` metotları bu üç yazımın açık hâli; ayrıntısı
-Ders 5'te.
+`iter()` / `iter_mut()` / `into_iter()` metotları bu üç yazımın açık hâli:
+
+```rust
+for n in notlar.iter()      { }   // = for n in &notlar
+for f in fiyatlar.iter_mut(){ }   // = for f in &mut fiyatlar
+for i in isimler.into_iter(){ }   // = for i in isimler
+```
+
+Kısayolu okumak kolay, açık yazım ise ne olduğunu söyler: `for` her zaman bir
+**iterator** üzerinde döner.
 
 ### Hızlı başvuru
 

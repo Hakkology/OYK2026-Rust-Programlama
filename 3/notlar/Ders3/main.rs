@@ -245,7 +245,7 @@ fn main() {
     // format! hicbirini tuketmez
     let s4 = String::from("iyi");
     let s5 = format!("{} {}", s4, "gunler");
-    println!("format!      {} / {}", s4, s5);
+    println!("format!      {s4} / {s5}");
 
     // Turkce tuzagi
     println!("Istanbul len={} chars={}", "İstanbul".len(), "İstanbul".chars().count());

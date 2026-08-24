@@ -1,4 +1,4 @@
-# Gün 3 · Ders 5 — Döngüler ve `iter` Üçlüsü
+# Gün 4 · Ders 5 — Döngüler ve `iter` Üçlüsü
 
 ## `for` her zaman bir iterator üzerinde döner
 
@@ -101,6 +101,42 @@ bayt konumunu söyler. Dilim alacaksanız `char_indices`, "kaçıncı harf" diye
 ```rust
 for x in v.iter().rev()          { }
 for (i, x) in v.iter().enumerate().rev() { }   // indeksler de tersten gelir
+```
+
+## Kendi tiplerinizde gezinme
+
+Kural sayılarda neyse struct ve enum'larda da odur; sadece artık `*` ile uğraşmak
+yerine alanlara ve varyantlara bakarsınız.
+
+```rust
+// okumak
+for g in &gezegenler {
+    println!("{} — {} uydu", g.ad, g.uydu);
+}
+
+// değiştirmek
+for g in &mut gezegenler {
+    g.uydu += 1;            // alanı doğrudan değiştiriyoruz, * gerekmiyor
+}
+
+// tüketmek — alanları dışarı taşımak istiyorsanız
+for g in gezegenler {
+    adlar.push(g.ad);       // String'i devraldık, kopya yok
+}
+```
+
+Üçüncüsü `String` alanı çekip almak için tek yol: ödünçten `String` **taşıyamazsınız**
+(`E0507`), o yüzden ya `clone()` yaparsınız ya listeyi tüketirsiniz.
+
+Enum listelerinde de aynı: döngü ile `match` yan yana çalışır.
+
+```rust
+for s in &sekiller {
+    match s {
+        Sekil::Cember { r } => ...,
+        ...
+    }
+}
 ```
 
 ## Diğer koleksiyonlarda

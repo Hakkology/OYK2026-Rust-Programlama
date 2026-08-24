@@ -1,7 +1,18 @@
-// Gun 3 / Ders 5 - Donguler ve iter Uclusu
+// Gun 4 / Ders 5 - Donguler ve iter Uclusu
 // rustc main.rs && ./main
 
 use std::collections::HashMap;
+
+#[derive(Debug)]
+struct Gezegen {
+    ad: String,
+    uydu: u32,
+}
+
+enum Sekil {
+    Cember { r: f64 },
+    Kare { kenar: f64 },
+}
 
 fn main() {
     // for her zaman bir iterator uzerinde doner
@@ -98,6 +109,44 @@ fn main() {
     println!();
     for (i, x) in sayilar.iter().enumerate().rev() {
         print!("{}:{} ", i, x);
+    }
+    println!();
+
+    // --- kendi tiplerimizde gezinme: struct ve enum ---
+    let mut gezegenler = vec![
+        Gezegen { ad: String::from("Dunya"), uydu: 1 },
+        Gezegen { ad: String::from("Mars"), uydu: 2 },
+        Gezegen { ad: String::from("Neptun"), uydu: 14 },
+    ];
+
+    // okumak
+    for g in &gezegenler {
+        print!("{}({}) ", g.ad, g.uydu);
+    }
+    println!();
+
+    // degistirmek - alanlara dogrudan yaziyoruz, * gerekmiyor
+    for g in &mut gezegenler {
+        g.uydu += 1;
+    }
+    println!("{:?}", gezegenler);
+
+    // tuketmek - String alanini disari TASIMAK icin tek yol
+    let mut adlar = Vec::new();
+    for g in gezegenler {
+        adlar.push(g.ad);               // sahipligi devraldik, kopya yok
+    }
+    // println!("{:?}", gezegenler);    // E0382 - liste tukendi
+    println!("{:?}", adlar);
+
+    // enum listesinde dongu + match yan yana
+    let sekiller = vec![Sekil::Cember { r: 1.0 }, Sekil::Kare { kenar: 2.0 }];
+    for s in &sekiller {
+        let alan = match s {
+            Sekil::Cember { r } => 3.14159 * r * r,
+            Sekil::Kare { kenar } => kenar * kenar,
+        };
+        print!("{:.2} ", alan);
     }
     println!();
 
