@@ -65,7 +65,8 @@ fn main() {
     }
     println!("{:?}", sayim.get("rust"));
 
-    // gezinme - SIRA YOKTUR, her calistirmada degisebilir
+    // gezinme - burada da for bir ITERATOR uzerinde doner, Vec'teki uc yol aynen gecerli
+    // SIRA YOKTUR, her calistirmada degisebilir
     for (anahtar, deger) in &sayim {
         print!("{}={} ", anahtar, deger);
     }

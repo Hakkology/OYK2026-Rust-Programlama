@@ -115,22 +115,28 @@ fn ilk(v: &Vec<i32>) -> &i32 {
 
 Dönen referans çağıranın verisini gösterir, fonksiyonun kendi verisini değil.
 
-## Sahipliği alan fonksiyon değeri de düşürür
+## Değer ne zaman düşer
 
-Fonksiyon değeri aldıysa, o değer **fonksiyon içinde** düşer — çağrı dönmeden önce:
+Sahip kimse düşüren de o. Fonksiyon değeri **aldıysa**, değer fonksiyon içinde,
+çağrı dönmeden düşer:
 
 ```rust
-let i1 = Iz(String::from("taşınan"));
-tasi(i1);
-println!("fonksiyon döndü");   // "drop: taşınan" bundan ÖNCE yazılır
+yut(s);          // s'in verisi burada bırakıldı
 ```
 
 Ödünç alan fonksiyon düşürmez; değer çağıranda kalmaya devam eder.
-"Sahip kimse düşüren de o" kuralının fonksiyonlardaki hâli bu.
 
-`drop` metodunu elle çağıramazsınız (`E0040`) — çünkü kapsam sonunda derleyici zaten
-çağıracak, iki kez düşmüş olurdu. Erken düşürmek için `drop(x)` kullanılır; o bir dil
-özelliği değil, sadece sahipliği alıp hiçbir şey yapmayan bir fonksiyon.
+`drop(x)` değeri erken düşürür. Bu bir dil özelliği değil, sadece sahipliği alıp
+hiçbir şey yapmayan bir fonksiyon:
+
+```rust
+let gecici = String::from("geçici veri");
+drop(gecici);
+// println!("{}", gecici);   // E0382 — sahipliği drop aldı
+```
+
+`drop` **metodunu** elle çağıramazsınız (`x.drop()` → `E0040`): kapsam sonunda
+derleyici zaten çağıracak, değer iki kez düşmüş olurdu.
 
 ## Parametre tipi seçimi
 

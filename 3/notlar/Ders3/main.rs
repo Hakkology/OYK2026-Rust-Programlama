@@ -11,11 +11,10 @@ fn main() {
     v.push(9);                          // sona ekle
     println!("push      {:?}", v);
 
-    let son = v.pop();                  // sondan al, Option doner
+    // pop bir Option dondurur: "Some(9)" deger var demek, liste bossa "None" gelir
+    // unwrap icindekini alir (bos listede unwrap panikler)
+    let son = v.pop();
     println!("pop       {:?} -> {:?}", son, v);
-
-    v.insert(1, 7);                     // araya ekle, sonrakiler kayar
-    println!("insert    {:?}", v);
 
     let cikan = v.remove(0);            // cikar ve dondur
     println!("remove    {} -> {:?}", cikan, v);
@@ -26,28 +25,10 @@ fn main() {
     v.reverse();
     println!("reverse   {:?}", v);
 
-    v.swap(0, 1);
-    println!("swap      {:?}", v);
-
     println!("contains(&7)={} first={:?} last={:?}", v.contains(&7), v.first(), v.last());
 
     // get sinir disinda None doner, v[i] paniklerdi
     println!("get(0)={:?} get(99)={:?}", v.get(0), v.get(99));
-
-    v.extend(vec![4, 4, 8]);
-    println!("extend    {:?}", v);
-
-    v.sort();
-    v.dedup();                          // yan yana tekrarlari siler
-    println!("dedup     {:?}", v);
-
-    v.retain(|x| x % 2 == 0);           // kosulu saglamayanlari at
-    println!("retain    {:?}", v);
-
-    v.truncate(1);
-    println!("truncate  {:?}", v);
-
-    println!("cap={}", v.capacity());
 
     // kapasite dolunca YENI blok alinir, veri tasinir, kapasite ikiye katlanir
     // (allocator bazen yerinde buyutur, o zaman adres ayni kalir - garantisi yok)
@@ -64,20 +45,102 @@ fn main() {
     v.clear();
     println!("clear     {:?} bos_mu={}", v, v.is_empty());
 
-    // gezinme uc sekilde
-    let mut g = vec![1, 2, 3];
-    for x in &g {
-        print!("{} ", x);               // okur
+    // ayni metotlarla iki farkli yapi
+    // KUYRUK - ilk giren ilk cikar: push sona ekler, remove(0) bastan alir
+    let mut kuyruk = vec!["ali", "veli"];
+    kuyruk.push("ayse");
+    while !kuyruk.is_empty() {
+        let kisi = kuyruk.remove(0);    // O(n) - kalan herkes kayar
+        print!("sira:{} ", kisi);
     }
     println!();
-    for x in &mut g {
-        *x *= 10;                       // degistirir
-    }
-    println!("{:?}", g);
-    for x in g {
-        print!("{} ", x);               // TUKETIR - g bundan sonra yok
+
+    // YIGIN - son giren ilk cikar: push sona ekler, pop sondan alir
+    let mut yigin = Vec::new();
+    yigin.push("birinci");
+    yigin.push("ikinci");
+    while !yigin.is_empty() {
+        let ust = yigin.pop().unwrap(); // O(1) - hicbir sey kaymaz
+        print!("ust:{} ", ust);
     }
     println!();
+
+    // ---------------------------------------------------------------
+    // ITERATOR - uc yol, tek fark SAHIPLIK
+    //   kisayol      acik yazim          dongude x'in tipi
+    //   &v           v.iter()            &T
+    //   &mut v       v.iter_mut()        &mut T
+    //   v            v.into_iter()       T
+    // ---------------------------------------------------------------
+
+    // 1) OKUMAK - liste bizde kalir
+    let notlar = vec![70, 85, 90];
+
+    let mut toplam = 0;
+    for n in &notlar {                  // kisayol
+        toplam += n;
+    }
+
+    let mut toplam2 = 0;
+    for n in notlar.iter() {            // ayni seyin acik yazimi
+        toplam2 += n;
+    }
+    println!("toplam={} toplam2={} liste hala var: {:?}", toplam, toplam2, notlar);
+
+    // iterator bir DEGERDIR - degiskene alinabilir, tek basina hicbir sey yapmaz
+    let gezgin = notlar.iter();
+    println!("kac eleman: {}", gezgin.count());   // ancak burada calisti
+
+    // hazir metotlar da ayni iterator uzerinden gider
+    println!("sum={}", notlar.iter().sum::<i32>());
+
+    // for icinde secip yeni listeye toplamak
+    let mut gecenler = Vec::new();
+    for n in &notlar {
+        if *n >= 85 {
+            gecenler.push(*n);          // *n ile degeri kopyaladik
+        }
+    }
+    println!("gecenler {:?}", gecenler);
+
+    // 2) DEGISTIRMEK - &mut T verir, hedefe inmek icin * SART
+    let mut fiyatlar = vec![100, 200, 300];
+    for f in &mut fiyatlar {            // kisayol
+        *f = *f * 110 / 100;            // %10 zam
+    }
+    for f in fiyatlar.iter_mut() {      // acik yazim
+        *f += 1;
+    }
+    println!("fiyatlar {:?}", fiyatlar);
+
+    // 3) TUKETMEK - elemanlarin sahipligi donguye gecer
+    let isimler = vec![String::from("ada"), String::from("ege")];
+    let mut buyuk = Vec::new();
+    for i in isimler {                  // kisayol (= isimler.into_iter())
+        buyuk.push(i.to_uppercase());   // i: String, sahibi biziz
+    }
+    // println!("{:?}", isimler);       // E0382 - isimler tasindi, artik yok
+    println!("buyuk {:?}", buyuk);
+
+    // ayni is acik yazimla - into_iter() de listeyi tuketir
+    let sehirler = vec![String::from("ankara"), String::from("izmir")];
+    let mut uzunluklar = Vec::new();
+    for s in sehirler.into_iter() {
+        uzunluklar.push(s.chars().count());
+    }
+    println!("uzunluklar {:?}", uzunluklar);
+
+    // okumak yetiyorsa TUKETME - tek karakter fark
+    let kalsin = vec![String::from("bursa")];
+    for s in &kalsin {
+        println!("{} ({} harf)", s, s.chars().count());
+    }
+    println!("kalsin hala duruyor: {:?}", kalsin);
+
+    // AYNI KURAL her koleksiyonda gecerli - HashMap'te de for bir iterator uzerinde doner:
+    //   for (anahtar, deger) in &harita        okur
+    //   for deger in harita.values_mut()       degistirir
+    //   for (anahtar, deger) in harita         tuketir
 
     // Vec'ten TASIMA yasak - E0507
     let sahipli = vec![String::from("a"), String::from("b")];

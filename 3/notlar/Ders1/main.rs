@@ -1,15 +1,6 @@
 // Gun 3 / Ders 1 - Fonksiyonlarda Sahiplik
 // rustc main.rs && ./main
 
-// Drop uygulayan tip - dusme anini yazdiriyor
-struct Iz(String);
-
-impl Drop for Iz {
-    fn drop(&mut self) {
-        println!("drop: {}", self.0);
-    }
-}
-
 fn main() {
     // parametreye gecen deger TASINIR, cagiran kaybeder
     let s = String::from("merhaba");
@@ -100,34 +91,25 @@ fn main() {
     // fn topla_dilim(v: &Vec<i32>) yazsaydik dizi ve dilim gecmezdi
 
     // SAHIPLIGI ALAN FONKSIYON DEGERI DE DUSURUR
-    // "tasinan" satiri fonksiyon donmeden ONCE yazilir - deger orada dustu
-    let i1 = Iz(String::from("tasinan"));
-    tasi(i1);
-    println!("fonksiyon dondu, deger coktan dustu");
+    // yut(s) donerken s'in verisi coktan birakilmisti - sahip fonksiyondu
+    // odunc alan fonksiyon dusurmez, deger cagiranda kalir (yukaridaki uzunluk_odunc)
 
-    // odunc alan fonksiyon dusurmez - deger cagiranda kalir
-    let i2 = Iz(String::from("odunc verilen"));
-    bak(&i2);
-    println!("bak dondu, i2 hala yasiyor");
+    // erken dusurmek: drop() sahipligi alir ve hicbir sey yapmadan biter
+    let gecici = String::from("gecici veri");
+    println!("{}", gecici);
+    drop(gecici);
+    // println!("{}", gecici);          // E0382 - sahipligi drop aldi
+    println!("gecici dusuruldu, main devam ediyor");
 
-    // drop metodunu ELLE cagiramazsiniz
-    // i2.drop();                       // E0040 explicit use of destructor method
-    drop(i2);                           // std::mem::drop sahipligi alir ve dusurur
-    println!("i2 erken dusuruldu");
+    // drop METODUNU elle cagiramazsiniz - derleyici kapsam sonunda zaten cagiracak
+    // let x = String::from("a");
+    // x.drop();                        // E0040 explicit use of destructor method
 
     // imza bir sozlesmedir, icine bakmadan ne olacagini soyler
     //   fn f(s: String)      -> alir, geri vermez
     //   fn f(s: &String)     -> okur
     //   fn f(s: &mut String) -> okur ve degistirir
     //   fn f() -> String     -> uretir, size verir
-}
-
-fn tasi(i: Iz) {
-    println!("fonksiyon icinde: {}", i.0);
-}
-
-fn bak(i: &Iz) {
-    println!("fonksiyon icinde (odunc): {}", i.0);
 }
 
 fn yut(s: String) {

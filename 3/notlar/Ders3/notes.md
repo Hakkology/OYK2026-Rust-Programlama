@@ -1,51 +1,161 @@
 # Gün 3 · Ders 3 — Vec Metotları ve Metin Tipleri
 
-## Bölüm 1 — `Vec` metotları (hızlı geçiş)
+## Bölüm 1 — `Vec`
 
-`Vec<T>` büyüyebilen liste. Stack'te üç kelime tutar (ptr / len / cap), veri heap'te.
-Elemanların hepsi **aynı tipte**.
+`Vec<T>` büyüyebilen listedir. Stack'te üç kelime tutar (ptr / len / cap), veri heap'te.
+Elemanların hepsi **aynı tipte** olmak zorunda.
+
+```rust
+let mut v = vec![3, 1, 2];      // dolu başla
+let mut b: Vec<i32> = Vec::new();  // boş başla, tip lazım
+```
+
+Değiştireceğiniz her `Vec` `let mut` olmalı: `push`, `pop`, `sort` gibi metotların
+hepsi `&mut self` alır.
+
+### Beş metot, ne yaptıkları
+
+**`push(x)` — sona ekler.** `Vec`'in tek büyüme kapısı. Kapasite yetmezse yeni yer
+alınır, veri taşınır; ortalama maliyeti yine de O(1).
+
+```rust
+let mut notlar = vec![70, 85];
+notlar.push(90);                // [70, 85, 90]
+```
+
+**`pop()` — sondan alır ve döndürür.** Hem siler hem verir. Dönen değer `Option<T>`:
+liste doluysa `Some(90)`, boşsa `None`. `unwrap()` içindekini alır — boş listede panikler.
+
+```rust
+let son = notlar.pop();         // Some(90), liste artık [70, 85]
+let deger = notlar.pop().unwrap();
+```
+
+**`insert(i, x)` / `remove(i)` — araya ekler / aradan çıkarır.** İkisi de kendinden
+sonraki tüm elemanları kaydırır, bu yüzden O(n). `remove` çıkardığı değeri döndürür.
+
+```rust
+notlar.insert(0, 50);           // [50, 70, 85]
+let ilk = notlar.remove(0);     // 50 döner, liste [70, 85]
+```
+
+**`sort()` — yerinde sıralar.** Yeni liste üretmez, listenin kendisini değiştirir.
+Bu yüzden `let mut` şart.
 
 ```rust
 let mut v = vec![3, 1, 2];
+v.sort();                       // [1, 2, 3]
 ```
+
+**`is_empty()` — boş mu.** `len() == 0` yazmak yerine bunu kullanın; hem okunur hem
+hata yapma ihtimali yok.
+
+```rust
+if !notlar.is_empty() { }
+```
+
+### İkisini birlikte kullanmak
+
+Aynı metotlarla iki farklı veri yapısı kurulur.
+
+**Kuyruk** — ilk giren ilk çıkar. `push` sona ekler, `remove(0)` baştan alır:
+
+```rust
+let mut kuyruk = vec!["ali", "veli"];
+kuyruk.push("ayşe");
+
+while !kuyruk.is_empty() {
+    let kisi = kuyruk.remove(0);
+    println!("sıra: {}", kisi);
+}
+```
+
+**Yığın** — son giren ilk çıkar. `push` sona ekler, `pop` sondan alır:
+
+```rust
+let mut yigin = Vec::new();
+yigin.push("birinci");
+yigin.push("ikinci");
+
+while !yigin.is_empty() {
+    let ust = yigin.pop().unwrap();
+    println!("üst: {}", ust);      // önce "ikinci"
+}
+```
+
+Fark tek satırda: `remove(0)` baştan alır ve **kalan her elemanı kaydırır** (O(n)),
+`pop()` sondan alır ve hiçbir şeyi kaydırmaz (O(1)). Sıra önemsizse yığın hep ucuzdur.
+
+### Iterator ile gezinme — `iter` / `iter_mut` / `into_iter`
+
+Bir `Vec` üzerinde dönmenin üç yolu var, aralarındaki tek fark **sahiplik**:
+
+```rust
+for x in &v      { }   // v.iter()       — okur,      liste bizde kalır
+for x in &mut v  { }   // v.iter_mut()   — değiştirir, liste bizde kalır
+for x in v       { }   // v.into_iter()  — TÜKETİR,   liste biter
+```
+
+**1. Okumak** — `&v` size `&T` verir:
+
+```rust
+let notlar = vec![70, 85, 90];
+let mut toplam = 0;
+for n in &notlar {
+    toplam += n;
+}
+println!("{} {}", toplam, notlar.len());   // notlar hâlâ elimizde
+```
+
+**2. Değiştirmek** — `&mut v` size `&mut T` verir, hedefe inmek için `*` şart:
+
+```rust
+let mut fiyatlar = vec![100, 200, 300];
+for f in &mut fiyatlar {
+    *f = *f * 110 / 100;        // %10 zam
+}
+println!("{:?}", fiyatlar);     // [110, 220, 330]
+```
+
+**3. Tüketmek** — `v` yazarsanız elemanların sahipliği döngüye geçer:
+
+```rust
+let isimler = vec![String::from("ada"), String::from("ege")];
+let mut buyuk = Vec::new();
+for i in isimler {
+    buyuk.push(i.to_uppercase());   // i: String, sahibi biziz
+}
+// println!("{:?}", isimler);       // E0382 — isimler taşındı
+```
+
+Üçüncüsü en sık yapılan hata: döngüden sonra listeyi kullanmaya kalkarsanız `E0382`
+alırsınız. Düzeltmesi tek karakter — `&isimler`.
+
+`iter()` / `iter_mut()` / `into_iter()` metotları bu üç yazımın açık hâli; ayrıntısı
+Ders 5'te.
+
+### Hızlı başvuru
 
 | Metot | Ne yapar |
 |---|---|
-| `Vec::new()` | boş vektör, kapasite 0 |
-| `vec![1, 2, 3]` / `vec![0; 5]` | dolu vektör / 5 tane 0 |
-| `Vec::with_capacity(n)` | baştan yer ayırır, gereksiz taşımayı önler |
-| `push(x)` | sona ekler |
-| `pop()` | sondan alır, `Option<T>` döner (boşsa `None`) |
-| `insert(i, x)` | araya ekler, sonrakileri kaydırır — O(n) |
-| `remove(i)` | çıkarır ve döndürür, sonrakileri kaydırır — O(n) |
-| `swap_remove(i)` | sondakiyle yer değiştirip çıkarır — O(1), sıra bozulur |
-| `len()` | eleman sayısı |
-| `is_empty()` | boş mu — `len() == 0` yerine bunu yazın |
-| `clear()` | hepsini siler, kapasite kalır |
+| `Vec::new()` / `vec![1, 2, 3]` | boş / dolu vektör |
+| `vec![0; 5]` | 5 tane 0 |
+| `Vec::with_capacity(n)` | baştan yer ayırır, taşımayı önler |
+| `push(x)` / `pop()` | sona ekler / sondan alır (`Option<T>`) |
+| `insert(i, x)` / `remove(i)` | araya ekler / aradan çıkarır — O(n) |
+| `swap_remove(i)` | sondakiyle takas edip çıkarır — O(1), sıra bozulur |
+| `len()` / `is_empty()` / `clear()` | uzunluk / boş mu / boşalt |
 | `truncate(n)` | ilk n eleman kalır |
 | `contains(&x)` | içinde var mı |
 | `get(i)` | `Option<&T>` — sınır dışında `None` |
 | `v[i]` | doğrudan erişim — sınır dışında **panikler** |
 | `first()` / `last()` | `Option<&T>` |
-| `sort()` | küçükten büyüğe sıralar |
-| `sort_by(\|a, b\| b.cmp(a))` | kendi ölçütünüzle sıralar |
-| `reverse()` | ters çevirir |
-| `swap(i, j)` | iki elemanı takas eder |
+| `sort()` / `sort_by(...)` | sıralar / kendi ölçütünüzle sıralar |
+| `reverse()` / `swap(i, j)` | ters çevirir / iki elemanı takas eder |
 | `retain(\|x\| kosul)` | koşulu sağlamayanları atar |
-| `dedup()` | **yan yana** tekrarları siler (önce `sort()` gerekir) |
-| `extend(digeri)` | başka bir koleksiyonu sona ekler |
-| `capacity()` / `reserve(n)` | mevcut kapasite / yer ayır |
-
-### Gezinme
-
-```rust
-for x in &v      { }   // okur
-for x in &mut v  { }   // değiştirir  (*x = ...)
-for x in v       { }   // TÜKETİR — v bundan sonra yok
-```
-
-Fark tamamen sahiplikte. Üçünün karşılığı olan `iter()` / `iter_mut()` /
-`into_iter()` metotları Ders 5'in konusu.
+| `dedup()` | yan yana tekrarları siler (önce `sort()`) |
+| `extend(digeri)` | başka koleksiyonu sona ekler |
+| `capacity()` / `reserve(n)` | kapasite / yer ayır |
 
 ### Maliyetler
 
