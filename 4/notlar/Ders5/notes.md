@@ -5,6 +5,11 @@
 C tarzı `for (i = 0; i < n; i++)` yok. `for` bir **iterator** ister; aralık da
 (`0..5`), koleksiyon da iterator verebilir.
 
+pub trait Iterator {
+    type Item;
+    fn next(&mut self) -> Option<Self::Item>;
+}
+
 ```rust
 for i in 0..3      { }   // aralık
 for x in &v        { }   // vektör
