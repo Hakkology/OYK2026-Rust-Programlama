@@ -4,14 +4,14 @@
 use std::collections::HashMap;
 
 #[derive(Debug)]
-struct Gezegen {
-    ad: String,
-    uydu: u32,
+struct Planet {
+    name: String,
+    moons: u32,
 }
 
-enum Sekil {
-    Cember { r: f64 },
-    Kare { kenar: f64 },
+enum Shape {
+    Circle { r: f64 },
+    Square { side: f64 },
 }
 
 fn main() {
@@ -114,39 +114,39 @@ fn main() {
 
     // --- kendi tiplerimizde gezinme: struct ve enum ---
     let mut gezegenler = vec![
-        Gezegen { ad: String::from("Dunya"), uydu: 1 },
-        Gezegen { ad: String::from("Mars"), uydu: 2 },
-        Gezegen { ad: String::from("Neptun"), uydu: 14 },
+        Planet { name: String::from("Dunya"), moons: 1 },
+        Planet { name: String::from("Mars"), moons: 2 },
+        Planet { name: String::from("Neptun"), moons: 14 },
     ];
 
     // okumak
     for g in &gezegenler {
-        print!("{}({}) ", g.ad, g.uydu);
+        print!("{}({}) ", g.name, g.moons);
     }
     println!();
 
     // degistirmek - alanlara dogrudan yaziyoruz, * gerekmiyor
     for g in &mut gezegenler {
-        g.uydu += 1;
+        g.moons += 1;
     }
     println!("{:?}", gezegenler);
 
     // tuketmek - String alanini disari TASIMAK icin tek yol
     let mut adlar = Vec::new();
     for g in gezegenler {
-        adlar.push(g.ad);               // sahipligi devraldik, kopya yok
+        adlar.push(g.name);               // sahipligi devraldik, kopya yok
     }
     // println!("{:?}", gezegenler);    // E0382 - liste tukendi
     println!("{:?}", adlar);
 
     // enum listesinde dongu + match yan yana
-    let sekiller = vec![Sekil::Cember { r: 1.0 }, Sekil::Kare { kenar: 2.0 }];
+    let sekiller = vec![Shape::Circle { r: 1.0 }, Shape::Square { side: 2.0 }];
     for s in &sekiller {
-        let alan = match s {
-            Sekil::Cember { r } => 3.14159 * r * r,
-            Sekil::Kare { kenar } => kenar * kenar,
+        let area = match s {
+            Shape::Circle { r } => 3.14159 * r * r,
+            Shape::Square { side } => side * side,
         };
-        print!("{:.2} ", alan);
+        print!("{:.2} ", area);
     }
     println!();
 

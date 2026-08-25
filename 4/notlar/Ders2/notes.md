@@ -6,7 +6,7 @@ Bir trait'in gerektirdiği kodu derleyici sizin yerinize yazıyor:
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Nokta { x: f64, y: f64 }
+struct Point { x: f64, y: f64 }
 ```
 
 Tek satır yazdınız, karşılığında `{:?}` ile yazdırma, `.clone()`, atamada kopyalanma
@@ -41,10 +41,10 @@ Türetilmiş sıralama **alanları yazdığınız sırayla** karşılaştırır:
 eşitse ikinci alan.
 
 ```rust
-struct Sure { dakika: u32, saniye: u32 }
+struct LapTime { minutes: u32, seconds: u32 }
 ```
 
-Böyle bir tipte sıralama doğru çalışır. Alan sırasını `saniye, dakika` yapsaydınız
+Böyle bir tipte sıralama doğru çalışır. Alan sırasını `seconds, minutes` yapsaydınız
 sıralama saçmalardı — derleyici uyarmaz, çünkü ne demek istediğinizi bilemez.
 
 ## `Debug` ve `Display` farkı
@@ -54,15 +54,15 @@ sıralama saçmalardı — derleyici uyarmaz, çünkü ne demek istediğinizi bi
 - `{}` → **Display**, kullanıcı için, **elle yazılır**
 
 `Display` neden derive edilemiyor? Çünkü kullanıcıya ne gösterileceğini derleyici
-bilemez. `Sure { dakika: 3, saniye: 45 }` ekrana `3:45` mi, `225 sn` mi, `3 dk 45 sn`
+bilemez. `LapTime { minutes: 3, seconds: 45 }` ekrana `3:45` mi, `225 sn` mi, `3 dk 45 sn`
 mi yazmalı? Bu bir ürün kararı, derleyicinin işi değil.
 
 ```rust
 use std::fmt;
 
-impl fmt::Display for Sure {
+impl fmt::Display for LapTime {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{:02}", self.dakika, self.saniye)
+        write!(f, "{}:{:02}", self.minutes, self.seconds)
     }
 }
 ```
@@ -86,28 +86,28 @@ dediğinizde `dbg!` satırları dosyaya değil ekrana gider.
 
 ## Builder pattern — akıcı API
 
-Bir tipin 8 alanı varsa, 8 parametreli bir `yeni` fonksiyonu okunmaz hâle gelir:
+Bir tipin 8 alanı varsa, 8 parametreli bir `new` fonksiyonu okunmaz hâle gelir:
 
 ```rust
-Karakter::yeni("Ejderha", 120, 15, true, false, 3, 0, 250)   // hangisi neydi?
+Character::new("Ejderha", 120, 15, true, false, 3, 0, 250)   // hangisi neydi?
 ```
 
 Bunun yerine her adımı adıyla söyleyen bir zincir:
 
 ```rust
-let ejder = Karakter::yeni("Ejderha")
-    .can(120)
-    .saldiri(15)
-    .ucabilir()
-    .olustur();
+let ejder = Character::new("Ejderha")
+    .health(120)
+    .attack(15)
+    .can_fly()
+    .build();
 ```
 
 Nasıl çalışıyor: her metot `mut self` alır, bir alanı değiştirir ve `self`'i geri
 döndürür. Yani nesne halkadan halkaya **taşınır**.
 
 ```rust
-fn can(mut self, x: u32) -> Self {
-    self.can = x;
+fn health(mut self, x: u32) -> Self {
+    self.health = x;
     self
 }
 ```

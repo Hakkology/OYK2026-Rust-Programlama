@@ -5,24 +5,24 @@ use std::mem::size_of;
 
 // 1) SINIRLI SECENEKLER - veri tasimayan enum, C'deki gibi
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Isik {
-    Kirmizi,
-    Sari,
-    Yesil,
+enum TrafficLight {
+    Red,
+    Yellow,
+    Green,
 }
 
 // 5) VARYANTLAR VERI TASIR - Rust'in farki
 #[derive(Debug)]
-enum Sekil {
-    Nokta,                              // veri yok
-    Cember { r: f64 },                  // isimli alan
-    Dikdortgen { en: f64, boy: f64 },   // iki isimli alan
-    Ucgen(f64, f64, f64),               // isimsiz uclu
+enum Shape {
+    Dot,                              // veri yok
+    Circle { r: f64 },                  // isimli alan
+    Rectangle { width: f64, height: f64 },   // iki isimli alan
+    Triangle(f64, f64, f64),               // isimsiz uclu
 }
 
 // 6) GECERSIZ DURUM TEMSIL EDILEMEZ - dort ihtimal, baskasi yok
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Baz {
+enum Base {
     A,
     T,
     G,
@@ -30,39 +30,39 @@ enum Baz {
 }
 
 // kenar not 2 - sayisal deger, sadece veri tasimayan enum'da
-enum HttpDurum {
-    Tamam = 200,
-    Bulunamadi = 404,
+enum HttpStatus {
+    Success = 200,
+    NotFound = 404,
 }
 
-impl Isik {
+impl TrafficLight {
     // 3) enum'a da impl yazilir, self secimi struct'takiyle ayni
-    fn saniye(&self) -> u32 {
+    fn seconds(&self) -> u32 {
         match self {
-            Isik::Kirmizi => 45,
-            Isik::Sari => 4,
-            Isik::Yesil => 30,
+            TrafficLight::Red => 45,
+            TrafficLight::Yellow => 4,
+            TrafficLight::Green => 30,
         }
     }
 
     // 4) DURUM MAKINESI - gecisler tek yerde toplanir
-    fn sonraki(&self) -> Isik {
+    fn next(&self) -> TrafficLight {
         match self {
-            Isik::Kirmizi => Isik::Yesil,
-            Isik::Yesil => Isik::Sari,
-            Isik::Sari => Isik::Kirmizi,
+            TrafficLight::Red => TrafficLight::Green,
+            TrafficLight::Green => TrafficLight::Yellow,
+            TrafficLight::Yellow => TrafficLight::Red,
         }
     }
 }
 
-impl Sekil {
-    fn alan(&self) -> f64 {
+impl Shape {
+    fn area(&self) -> f64 {
         // desen hem HANGISI oldugunu soyler hem ICINDEKINI verir
         match self {
-            Sekil::Nokta => 0.0,
-            Sekil::Cember { r } => 3.14159 * r * r,
-            Sekil::Dikdortgen { en, boy } => en * boy,
-            Sekil::Ucgen(a, b, c) => {
+            Shape::Dot => 0.0,
+            Shape::Circle { r } => 3.14159 * r * r,
+            Shape::Rectangle { width, height } => width * height,
+            Shape::Triangle(a, b, c) => {
                 let s = (a + b + c) / 2.0;          // Heron formulu
                 (s * (s - a) * (s - b) * (s - c)).sqrt()
             }
@@ -70,21 +70,21 @@ impl Sekil {
     }
 }
 
-impl Baz {
+impl Base {
     // DNA'da A-T, G-C eslesir
-    fn tamamlayici(&self) -> Baz {
+    fn complement(&self) -> Base {
         match self {
-            Baz::A => Baz::T,
-            Baz::T => Baz::A,
-            Baz::G => Baz::C,
-            Baz::C => Baz::G,
+            Base::A => Base::T,
+            Base::T => Base::A,
+            Base::G => Base::C,
+            Base::C => Base::G,
         }
     }
 }
 
 // kural 2: sonuc bulunamayabiliyorsa donus tipi Option<T> olur.
 // -> i32 yazsaydik "bulunamadi" durumunu ifade edecek yolumuz olmazdi.
-fn ilk_negatif(sayilar: &[i32]) -> Option<i32> {
+fn first_negative(sayilar: &[i32]) -> Option<i32> {
     for n in sayilar {
         if *n < 0 {
             return Some(*n);
@@ -93,15 +93,15 @@ fn ilk_negatif(sayilar: &[i32]) -> Option<i32> {
     None
 }
 
-struct Kullanici {
+struct User {
     id: u64,                    // her kullanicinin ID'si olmak zorunda
-    ad: String,                 // her kullanicinin adi var
-    ikinci_isim: Option<String>,// bazi insanlarin ikinci ismi YOK
-    can: i32,                   // eksik olamaz, ama 0 olabilir
+    name: String,                 // her kullanicinin adi var
+    middle_name: Option<String>,// bazi insanlarin ikinci ismi YOK
+    health: i32,                   // eksik olamaz, ama 0 olabilir
 }
 
-// arama bulamayabilir -> Option<&Kullanici>
-fn ara(liste: &[Kullanici], id: u64) -> Option<&Kullanici> {
+// arama bulamayabilir -> Option<&User>
+fn find(liste: &[User], id: u64) -> Option<&User> {
     for k in liste {
         if k.id == id {
             return Some(k);
@@ -114,23 +114,23 @@ fn main() {
     // -----------------------------------------------------------
     // 1-2) sinirli secenekler + match ile okumak
     // -----------------------------------------------------------
-    for isik in [Isik::Kirmizi, Isik::Sari, Isik::Yesil] {
+    for isik in [TrafficLight::Red, TrafficLight::Yellow, TrafficLight::Green] {
         let davranis = match isik {
-            Isik::Kirmizi => "dur",
-            Isik::Sari => "hazirlan",
-            Isik::Yesil => "gec",
+            TrafficLight::Red => "dur",
+            TrafficLight::Yellow => "hazirlan",
+            TrafficLight::Green => "gec",
         };
-        println!("{:?}: {} ({} sn)", isik, davranis, isik.saniye());
+        println!("{:?}: {} ({} sn)", isik, davranis, isik.seconds());
     }
 
     // -----------------------------------------------------------
     // 4) durum makinesi
     // -----------------------------------------------------------
-    let mut isik = Isik::Kirmizi;
+    let mut isik = TrafficLight::Red;
     print!("dongu: ");
     for _ in 0..5 {
         print!("{:?} -> ", isik);
-        isik = isik.sonraki();
+        isik = isik.next();
     }
     println!("{:?}", isik);
 
@@ -138,24 +138,24 @@ fn main() {
     // 5) varyantlar veri tasir - hepsi ayni Vec'in icinde durabiliyor
     // -----------------------------------------------------------
     let sekiller = vec![
-        Sekil::Nokta,
-        Sekil::Cember { r: 2.0 },
-        Sekil::Dikdortgen { en: 3.0, boy: 4.0 },
-        Sekil::Ucgen(3.0, 4.0, 5.0),
+        Shape::Dot,
+        Shape::Circle { r: 2.0 },
+        Shape::Rectangle { width: 3.0, height: 4.0 },
+        Shape::Triangle(3.0, 4.0, 5.0),
     ];
     let mut toplam = 0.0;
     for s in &sekiller {
-        println!("{:<34} alan = {:.2}", format!("{:?}", s), s.alan());
-        toplam += s.alan();
+        println!("{:<34} alan = {:.2}", format!("{:?}", s), s.area());
+        toplam += s.area();
     }
     println!("toplam alan = {:.2}", toplam);
 
     // -----------------------------------------------------------
     // 6) gecersiz durum temsil edilemez
     //    metinle olsaydi: let baz = "X";  -> derlenir, sessizce sacmalar
-    //    let baz = Baz::X;                // E0599 no variant named `X`
+    //    let baz = Base::X;               // E0599 no variant named `X`
     // -----------------------------------------------------------
-    let dizi = [Baz::A, Baz::T, Baz::G, Baz::G, Baz::C, Baz::A];
+    let dizi = [Base::A, Base::T, Base::G, Base::G, Base::C, Base::A];
     print!("dizi        : ");
     for b in &dizi {
         print!("{:?} ", b);
@@ -163,13 +163,13 @@ fn main() {
     println!();
     print!("tamamlayici : ");
     for b in &dizi {
-        print!("{:?} ", b.tamamlayici());
+        print!("{:?} ", b.complement());
     }
     println!();
 
     let mut gc = 0;
     for b in &dizi {
-        if *b == Baz::G || *b == Baz::C {
+        if *b == Base::G || *b == Base::C {
             gc += 1;
         }
     }
@@ -195,7 +195,7 @@ fn main() {
 
     // kural 2: bulunamama ihtimali imzaya yazilir
     let olcumler = [3, -7, 12, -1];
-    println!("{:?} {:?}", ilk_negatif(&olcumler), ilk_negatif(&[1, 2, 3]));
+    println!("{:?} {:?}", first_negative(&olcumler), first_negative(&[1, 2, 3]));
 
     // kural 3: kutuyu acmadan icindekini kullanamazsiniz
     let d: Option<i32> = Some(5);
@@ -216,33 +216,33 @@ fn main() {
 
     // HANGI DURUMDA HANGI TIP - her alan icin "bu olmayabilir mi?" diye sorun
     let kayitlar = vec![
-        Kullanici { id: 1, ad: String::from("Ada"), ikinci_isim: Some(String::from("Lovelace")), can: 100 },
-        Kullanici { id: 2, ad: String::from("Ege"), ikinci_isim: None, can: 0 },
+        User { id: 1, name: String::from("Ada"), middle_name: Some(String::from("Lovelace")), health: 100 },
+        User { id: 2, name: String::from("Ege"), middle_name: None, health: 0 },
     ];
 
     for k in &kayitlar {
         // id: u64        -> her zaman var
         // ikinci_isim    -> olmayabilir, o yuzden Option<String>
         // can: i32       -> eksik olamaz ama 0 OLABILIR (0 ile "yok" ayni sey degil)
-        match &k.ikinci_isim {
-            Some(i) => println!("#{} {} {} (can {})", k.id, k.ad, i, k.can),
-            None => println!("#{} {} (ikinci isim yok, can {})", k.id, k.ad, k.can),
+        match &k.middle_name {
+            Some(i) => println!("#{} {} {} (can {})", k.id, k.name, i, k.health),
+            None => println!("#{} {} (ikinci isim yok, can {})", k.id, k.name, k.health),
         }
     }
 
     // uzunluk her zaman vardir -> usize, Option degil
     println!("kayit sayisi = {}", kayitlar.len());
 
-    // arama BULAMAYABILIR -> Option<&Kullanici>
-    match ara(&kayitlar, 2) {
-        Some(k) => println!("bulundu: {}", k.ad),
+    // arama BULAMAYABILIR -> Option<&User>
+    match find(&kayitlar, 2) {
+        Some(k) => println!("bulundu: {}", k.name),
         None => println!("bulunamadi"),
     }
-    match ara(&kayitlar, 99) {
-        Some(k) => println!("bulundu: {}", k.ad),
+    match find(&kayitlar, 99) {
+        Some(k) => println!("bulundu: {}", k.name),
         None => println!("99 numarali kayit bulunamadi"),
     }
-    // C#/C++ tarafinda ayni fonksiyon Kullanici dondururdu ve null gelebilecegi
+    // C#/C++ tarafinda ayni fonksiyon User dondururdu ve null gelebilecegi
     // imzadan ANLASILMAZDI. Burada imza soyluyor.
 
     // 0 ILE "YOK" AYNI SEY DEGIL - en cok karistirilan yer
@@ -270,7 +270,7 @@ fn main() {
     // -----------------------------------------------------------
     // kenar not 1 - bellekte enum: etiket + en buyuk varyant + hizalama
     // -----------------------------------------------------------
-    println!("Isik = {} bayt   Sekil = {} bayt", size_of::<Isik>(), size_of::<Sekil>());
+    println!("TrafficLight = {} bayt   Shape = {} bayt", size_of::<TrafficLight>(), size_of::<Shape>());
 
     // niche optimization: Box asla null olamaz, None o bos desene yerlesir
     println!("Box<i32>         = {} bayt", size_of::<Box<i32>>());
@@ -286,5 +286,5 @@ fn main() {
     println!("Option<*const i32>   = {} bayt  <- iki katina cikti", size_of::<Option<*const i32>>());
 
     // kenar not 2 - sayisal deger
-    println!("{} {}", HttpDurum::Tamam as i32, HttpDurum::Bulunamadi as i32);
+    println!("{} {}", HttpStatus::Success as i32, HttpStatus::NotFound as i32);
 }

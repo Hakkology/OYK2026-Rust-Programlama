@@ -5,7 +5,7 @@
 `match` **bütün ihtimalleri** ele almak zorundadır. Biri eksikse kod derlenmez:
 
 ```
-E0004: non-exhaustive patterns: `Isik::Sari` not covered
+E0004: non-exhaustive patterns: `TrafficLight::Yellow` not covered
 ```
 
 Asıl kazanç burada değil, ileride: enum'a yeni bir varyant eklediğinizde onu ele
@@ -29,8 +29,8 @@ sessizce `_` dalına düşer. Sayılarda `_` şart, ama enum'larda genelde köt�
 | koşullu (guard) | `n if n % 15 == 0 => ...` |
 | bağlama (`@`) | `n @ 90..=100 => ...` (hem eşleşir hem değeri tutar) |
 | tuple | `(0, y) => ...` |
-| struct | `Kare { satir: 1, sutun } => ...` |
-| enum | `Sekil::Cember { r } => ...` |
+| struct | `Square { row: 1, col } => ...` |
+| enum | `Shape::Circle { r } => ...` |
 
 ## Destructuring — deseni parçalayarak okumak
 
@@ -38,9 +38,9 @@ Bir enum varyantının içindeki veriye ancak desenle ulaşırsınız:
 
 ```rust
 match sekil {
-    Sekil::Cember { r } => 3.14 * r * r,
-    Sekil::Ucgen(a, b, c) => ...,
-    Sekil::Nokta => 0.0,
+    Shape::Circle { r } => 3.14 * r * r,
+    Shape::Triangle(a, b, c) => ...,
+    Shape::Dot => 0.0,
 }
 ```
 
@@ -51,8 +51,8 @@ Struct'ta da çalışır, hatta bazı alanları sabitleyip bazılarını yakalay
 
 ```rust
 match kare {
-    Kare { satir: 1, sutun } => println!("ilk sırada, {}. sütun", sutun),
-    Kare { satir, .. }       => println!("{}. sıra", satir),
+    Square { row: 1, col } => println!("ilk sırada, {}. sütun", col),
+    Square { row, .. }       => println!("{}. sıra", row),
 }
 ```
 
@@ -79,7 +79,7 @@ let Some(ilk) = olcumler.first() else {
 
 while let Some(ust) = yigin.pop() { }
 
-if matches!(isik, Isik::Kirmizi) { }
+if matches!(isik, TrafficLight::Red) { }
 ```
 
 `let else`'in sağ tarafı **çıkmak zorundadır** (`return`, `break`, `continue`, `panic!`).

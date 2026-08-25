@@ -28,7 +28,7 @@ fn lab_1_option() {
     println!("{}", olcumler.get(99).copied().unwrap_or(0.0)); // yoksa varsayilan
 
     // ORNEK: Option donduren fonksiyon - bulamazsa None
-    println!("{:?} {:?}", en_sicak(&olcumler), en_sicak(&[]));
+    println!("{:?} {:?}", hottest(&olcumler), hottest(&[]));
 
     // ORNEK: 0 ile "yok" ayni sey degil
     let sensorler = [Some(0.0), None];
@@ -39,11 +39,11 @@ fn lab_1_option() {
         }
     }
 
-    // TODO 1a: fn ilk_donma(s: &[f64]) -> Option<f64>
+    // TODO 1a: fn first_freezing(s: &[f64]) -> Option<f64>
     //          sifirin altindaki ILK olcumu dondursun, yoksa None
     //          ipucu: dongude bulunca return Some(x), fonksiyon sonunda None
 
-    // TODO 1b: fn bol(a: f64, b: f64) -> Option<f64>
+    // TODO 1b: fn divide(a: f64, b: f64) -> Option<f64>
     //          b sifirsa None dondursun. Sonucu match ile yazdirin.
 
     // TODO 1c: asagidaki dorttte fark ne? Her birini deneyin, ne zaman
@@ -54,7 +54,7 @@ fn lab_1_option() {
     //          icini once if let ile, sonra match ile yazdirin
 }
 
-fn en_sicak(olcumler: &[f64]) -> Option<f64> {
+fn hottest(olcumler: &[f64]) -> Option<f64> {
     if olcumler.is_empty() {
         return None;                    // olcum yoksa "en sicak" diye bir sey de yok
     }
@@ -68,33 +68,33 @@ fn en_sicak(olcumler: &[f64]) -> Option<f64> {
 }
 
 // ---------------------------------------------------------------------------
-// LAB 2 - Nokta, Vektor (struct + impl)
+// LAB 2 - Point (struct + impl)
 // ---------------------------------------------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Nokta {
+struct Point {
     x: f64,
     y: f64,
 }
 
-impl Nokta {
-    fn yeni(x: f64, y: f64) -> Nokta {
-        Nokta { x, y }
+impl Point {
+    fn new(x: f64, y: f64) -> Point {
+        Point { x, y }
     }
 
     // ORNEK: &self sadece okur
-    fn uzaklik(&self, digeri: &Nokta) -> f64 {
+    fn distance(&self, digeri: &Point) -> f64 {
         let dx = self.x - digeri.x;
         let dy = self.y - digeri.y;
         (dx * dx + dy * dy).sqrt()
     }
 
-    // TODO 2a: fn orta_nokta(&self, digeri: &Nokta) -> Nokta
+    // TODO 2a: fn midpoint(&self, digeri: &Point) -> Point
     //          iki noktanin tam ortasindaki noktayi dondursun
 
-    // TODO 2b: fn olcekle(&mut self, kat: f64)
+    // TODO 2b: fn scale(&mut self, kat: f64)
     //          x ve y'yi kat ile carpsin. Neden &mut self?
 
-    // TODO 2c: fn ceyrek(&self) -> u8
+    // TODO 2c: fn quadrant(&self) -> u8
     //          noktanin hangi ceyrekte oldugunu dondursun (1-4), eksen uzerindeyse 0
     //          ipucu: match (self.x > 0.0, self.y > 0.0)
 }
@@ -102,15 +102,15 @@ impl Nokta {
 fn lab_2_geometri() {
     println!("-- lab 2 --");
 
-    let a = Nokta::yeni(0.0, 0.0);
-    let b = Nokta::yeni(3.0, 4.0);
-    println!("{:?} {:?} uzaklik={}", a, b, a.uzaklik(&b));
+    let a = Point::new(0.0, 0.0);
+    let b = Point::new(3.0, 4.0);
+    println!("{:?} {:?} uzaklik={}", a, b, a.distance(&b));
 
     let yol = vec![
-        Nokta::yeni(0.0, 0.0),
-        Nokta::yeni(3.0, 4.0),
-        Nokta::yeni(3.0, 8.0),
-        Nokta::yeni(-1.0, 8.0),
+        Point::new(0.0, 0.0),
+        Point::new(3.0, 4.0),
+        Point::new(3.0, 8.0),
+        Point::new(-1.0, 8.0),
     ];
     println!("{} nokta", yol.len());
 
@@ -120,28 +120,28 @@ fn lab_2_geometri() {
     // TODO 2e: yoldaki hangi nokta baslangica en uzak? Indeksini yazdirin.
 
     // TODO 2f: tuple struct'larla birim guvenligi:
-    //          struct Metre(f64);  struct Ayak(f64);
-    //          fn ayaktan_metreye(a: Ayak) -> Metre   (1 ayak = 0.3048 metre)
-    //          Sonra bir Metre degerini ayaktan_metreye'ye vermeyi deneyin, hatayi okuyun.
+    //          struct Meters(f64);  struct Feet(f64);
+    //          fn feet_to_meters(a: Feet) -> Meters   (1 ayak = 0.3048 metre)
+    //          Sonra bir Meters degerini feet_to_meters'a vermeyi deneyin, hatayi okuyun.
 }
 
 // ---------------------------------------------------------------------------
 // LAB 3 - enum + match
 // ---------------------------------------------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Isik {
-    Kirmizi,
-    Sari,
-    Yesil,
+enum TrafficLight {
+    Red,
+    Yellow,
+    Green,
 }
 
-impl Isik {
+impl TrafficLight {
     // ORNEK: durum makinesi
-    fn sonraki(&self) -> Isik {
+    fn next(&self) -> TrafficLight {
         match self {
-            Isik::Kirmizi => Isik::Yesil,
-            Isik::Yesil => Isik::Sari,
-            Isik::Sari => Isik::Kirmizi,
+            TrafficLight::Red => TrafficLight::Green,
+            TrafficLight::Green => TrafficLight::Yellow,
+            TrafficLight::Yellow => TrafficLight::Red,
         }
     }
 }
@@ -149,24 +149,24 @@ impl Isik {
 fn lab_3_enum() {
     println!("-- lab 3 --");
 
-    let mut isik = Isik::Kirmizi;
+    let mut isik = TrafficLight::Red;
     for _ in 0..4 {
         print!("{:?} -> ", isik);
-        isik = isik.sonraki();
+        isik = isik.next();
     }
     println!("{:?}", isik);
 
-    // TODO 3a: enum Sekil tanimlayin - Cember { r }, Kare { kenar }, Ucgen(f64, f64, f64)
-    //          impl Sekil { fn alan(&self) -> f64 }  yazin, match ile
+    // TODO 3a: enum Shape tanimlayin - Circle { r }, Square { side }, Triangle(f64, f64, f64)
+    //          impl Shape { fn area(&self) -> f64 }  yazin, match ile
 
     // TODO 3b: birkac sekli bir Vec'e koyup en buyuk alanliyi bulun
 
-    // TODO 3c: DNA - enum Baz { A, T, G, C }
-    //          fn tamamlayici(b: &Baz) -> Baz     (A-T, G-C eslesir)
-    //          fn tamamlayici_dizi(d: &[Baz]) -> Vec<Baz>
+    // TODO 3c: DNA - enum Base { A, T, G, C }
+    //          fn complement(b: &Base) -> Base    (A-T, G-C eslesir)
+    //          fn complement_strand(d: &[Base]) -> Vec<Base>
     //          Sonra dizinin GC oranini yuzde olarak yazdirin.
 
-    // TODO 3d: Isik'a YanipSonen diye YENI bir varyant ekleyin ve derleyin.
+    // TODO 3d: TrafficLight'a Blinking diye YENI bir varyant ekleyin ve derleyin.
     //          Kac ayri yerde hata aldiniz? Hata kodu neydi?
     //          Ayni deneyi `_ => ...` dali ekleyerek tekrarlayin - ne degisti?
     //          Dersin en onemli sorusu bu: derleyici sizin icin ne yapti?
@@ -182,9 +182,9 @@ fn lab_4_gezinme() {
     println!("-- lab 4 --");
 
     let noktalar = vec![
-        Nokta::yeni(1.0, 1.0),
-        Nokta::yeni(4.0, 5.0),
-        Nokta::yeni(-2.0, 3.0),
+        Point::new(1.0, 1.0),
+        Point::new(4.0, 5.0),
+        Point::new(-2.0, 3.0),
     ];
 
     // ORNEK: okumak - liste bizde kalir

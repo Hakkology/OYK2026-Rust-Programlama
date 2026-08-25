@@ -111,17 +111,17 @@ yerine alanlara ve varyantlara bakarsınız.
 ```rust
 // okumak
 for g in &gezegenler {
-    println!("{} — {} uydu", g.ad, g.uydu);
+    println!("{} — {} uydu", g.name, g.moons);
 }
 
 // değiştirmek
 for g in &mut gezegenler {
-    g.uydu += 1;            // alanı doğrudan değiştiriyoruz, * gerekmiyor
+    g.moons += 1;            // alanı doğrudan değiştiriyoruz, * gerekmiyor
 }
 
 // tüketmek — alanları dışarı taşımak istiyorsanız
 for g in gezegenler {
-    adlar.push(g.ad);       // String'i devraldık, kopya yok
+    adlar.push(g.name);       // String'i devraldık, kopya yok
 }
 ```
 
@@ -133,7 +133,7 @@ Enum listelerinde de aynı: döngü ile `match` yan yana çalışır.
 ```rust
 for s in &sekiller {
     match s {
-        Sekil::Cember { r } => ...,
+        Shape::Circle { r } => ...,
         ...
     }
 }

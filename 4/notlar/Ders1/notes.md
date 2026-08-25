@@ -6,12 +6,12 @@ Birbirine ait verileri **tek bir tip** altında toplar. Bugüne kadar iki ayrı 
 ya da iki `HashMap`'i elle senkron tutuyorduk; artık gerekmiyor.
 
 ```rust
-struct Nokta {
+struct Point {
     x: f64,
     y: f64,
 }
 
-let n = Nokta { x: 3.0, y: 4.0 };
+let n = Point { x: 3.0, y: 4.0 };
 println!("{} {}", n.x, n.y);
 ```
 
@@ -20,15 +20,15 @@ Alan sırası oluştururken önemsizdir, isim yeter.
 ## Üç struct türü
 
 ```rust
-struct Nokta { x: f64, y: f64 }   // klasik — isimli alanlar
-struct Metre(f64);                // tuple struct — alanlar isimsiz, .0 ile erişilir
-struct Baslangic;                 // unit-like — hiç alanı yok, 0 bayt
+struct Point { x: f64, y: f64 }   // klasik — isimli alanlar
+struct Meters(f64);               // tuple struct — alanlar isimsiz, .0 ile erişilir
+struct Origin;                    // unit-like — hiç alanı yok, 0 bayt
 ```
 
 ## Alan bazlı `mut` yok
 
 ```rust
-let mut n = Nokta { x: 0.0, y: 0.0 };
+let mut n = Point { x: 0.0, y: 0.0 };
 n.x = 5.0;      // tüm struct mut olmak zorunda
 ```
 
@@ -38,19 +38,19 @@ olarak takip ediyor: `&mut n` aldığınızda bütün alanları ödünç almış
 ## `impl` — metotlar
 
 ```rust
-impl Nokta {
-    fn yeni(x: f64, y: f64) -> Nokta { Nokta { x, y } }   // associated function
-    fn uzunluk(&self) -> f64 { (self.x * self.x + self.y * self.y).sqrt() }
+impl Point {
+    fn new(x: f64, y: f64) -> Point { Point { x, y } }   // associated function
+    fn length(&self) -> f64 { (self.x * self.x + self.y * self.y).sqrt() }
 }
 
-let n = Nokta::yeni(3.0, 4.0);   // :: ile çağrılır, self almaz
-println!("{}", n.uzunluk());     // . ile çağrılır, self alır
+let n = Point::new(3.0, 4.0);   // :: ile çağrılır, self almaz
+println!("{}", n.length());     // . ile çağrılır, self alır
 ```
 
 `self` almayan fonksiyona **associated function** denir; `String::from`, `Vec::new`
-tam olarak bunlar. `yeni` bir dil özelliği değil, sadece yerleşik bir isim geleneği.
+tam olarak bunlar. `new` bir dil özelliği değil, sadece yerleşik bir isim geleneği.
 
-`Nokta { x, y }` yazımı **field init shorthand**: değişken adı alan adıyla aynıysa
+`Point { x, y }` yazımı **field init shorthand**: değişken adı alan adıyla aynıysa
 `x: x` yazmanıza gerek yok.
 
 ## `self` seçimi — dersin kalbi
@@ -64,8 +64,8 @@ Bu tablo Gün 3'te öğrendiğiniz ödünç kurallarının aynısı, sadece meto
 | `self` | **tüketir** | taşıma |
 
 ```rust
-fn uzunluk(&self) -> f64          // okur, nesne çağıranda kalır
-fn otele(&mut self, dx: f64)      // değiştirir, nesne çağıranda kalır
+fn length(&self) -> f64          // okur, nesne çağıranda kalır
+fn translate(&mut self, dx: f64)      // değiştirir, nesne çağıranda kalır
 fn ada_donustur(self) -> String   // tüketir, nesne bir daha kullanılamaz
 ```
 
@@ -77,23 +77,36 @@ yutup yerine başka bir şey mi verecek? İmza cevabı okuyucuya söyler.
 Bir struct'ı başka birinden türetmek için:
 
 ```rust
-let ikiz = Gezegen { uydu: 5, ..dunya };
+let ikiz = Planet { moons: 5, ..dunya };
 ```
 
-Yazmadığınız alanlar `dunya`'dan alınır. **Dikkat:** bu alanlar kopyalanmaz,
-**taşınır**. `ad` bir `String` olduğu için `dunya` artık kullanılamaz (`E0382`).
-Sayı alanları Copy olduğu için onlarda böyle bir sorun yok — yani struct'ın içinde
-`String` varsa `..` bütünü götürür.
+Yazmadığınız alanlar `dunya`'dan alınır. **Dikkat:** Copy olmayan alanlar
+kopyalanmaz, **taşınır**. `name` bir `String` olduğu için `dunya` bundan sonra
+**kısmen taşınmış** sayılır. Üç ayrı durum çıkıyor:
+
+```rust
+let ikiz = Planet { moons: 5, ..dunya };
+
+dunya.radius_km      // çalışır — f64 Copy, kopyalandı
+dunya.name           // E0382: borrow of moved value — bu alan taşındı
+dunya                // E0382: use of partially moved value — bütünü artık kullanılamaz
+```
+
+Yani `..` bütünü götürmüyor; sadece Copy olmayan alanları alıyor. Kaybettiğiniz şey
+o alan ve struct'ı **bir bütün olarak** kullanabilme hakkı. Tüm alanlar Copy olsaydı
+(`Point` gibi) hiçbir şey kaybolmazdı, `dunya` da olduğu gibi kullanılabilirdi.
+
+Bu, Gün 2'de tuple üzerinde gördüğünüz **kısmi move**'un struct hâli.
 
 ## Tuple struct — bedelsiz tip güvenliği
 
 ```rust
-struct Metre(f64);
-struct Ayak(f64);
+struct Meters(f64);
+struct Feet(f64);
 ```
 
 İkisi de içinde `f64` tutuyor ama **ayrı tiplerdir**, birbirinin yerine geçemezler.
-`Metre` bekleyen fonksiyona `Ayak` verirseniz `E0308` alırsınız. Çalışma zamanında
+`Meters` bekleyen fonksiyona `Feet` verirseniz `E0308` alırsınız. Çalışma zamanında
 hiçbir maliyeti yok; sadece derleyiciye "bu sayı öyle bir sayı değil" demiş oluyorsunuz.
 
 > 1999'da NASA'nın Mars Climate Orbiter uydusu, bir ekip pound-force, diğeri newton
@@ -104,11 +117,11 @@ hiçbir maliyeti yok; sadece derleyiciye "bu sayı öyle bir sayı değil" demi�
 ## Unit-like struct
 
 ```rust
-struct Baslangic;
+struct Origin;
 ```
 
 Alanı yok, bellekte **0 bayt** yer kaplar. Veri taşımayan ama tip olarak var olması
-gereken şeyler için kullanılır. `Vec<Baslangic>` bir milyon eleman tutsa bile veri
+gereken şeyler için kullanılır. `Vec<Origin>` bir milyon eleman tutsa bile veri
 için ek bellek harcamaz — saklanacak bir şey yok.
 
 ## Bellekte struct
@@ -124,5 +137,5 @@ Rust alanların sırasını **değiştirebilir** ve bunu daha az padding için y
 sıra yazdığınız gibi kalır. Bu yüzden Rust'ta alanları büyükten küçüğe dizmek gibi
 bir el işçiliğine gerek yok.
 
-Struct varsayılan olarak **stack**'te durur. `Vec<Nokta>` yaparsanız `Nokta`'lar
+Struct varsayılan olarak **stack**'te durur. `Vec<Point>` yaparsanız `Point`'lar
 heap'te yan yana dizilir — araya pointer girmez, bu da onları hızlı gezilebilir kılar.

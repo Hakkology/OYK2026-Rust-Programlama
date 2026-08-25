@@ -7,16 +7,16 @@ Günün cümlesi: **geçersiz durumu temsil edilemez kıl.**
 Bir değerin alabileceği ihtimaller sayılıysa, enum onları **tipin içine** yazar:
 
 ```rust
-enum Isik {
-    Kirmizi,
-    Sari,
-    Yesil,
+enum TrafficLight {
+    Red,
+    Yellow,
+    Green,
 }
 
-let isik = Isik::Kirmizi;
+let isik = TrafficLight::Red;
 ```
 
-`Isik` tipinde bir değer bu üçünden biridir. Dördüncü bir ihtimal **yoktur** —
+`TrafficLight` tipinde bir değer bu üçünden biridir. Dördüncü bir ihtimal **yoktur** —
 uydurmak isteseniz de derleyici izin vermez.
 
 ## 2. `match` ile okumak
@@ -25,9 +25,9 @@ Enum'un içinden bilgi almanın yolu `match`:
 
 ```rust
 match isik {
-    Isik::Kirmizi => "dur",
-    Isik::Sari    => "hazırlan",
-    Isik::Yesil   => "geç",
+    TrafficLight::Red    => "dur",
+    TrafficLight::Yellow => "hazırlan",
+    TrafficLight::Green  => "geç",
 }
 ```
 
@@ -38,12 +38,12 @@ match isik {
 Struct'lardakiyle aynı, `self` seçimi de aynı:
 
 ```rust
-impl Isik {
-    fn saniye(&self) -> u32 {
+impl TrafficLight {
+    fn seconds(&self) -> u32 {
         match self {
-            Isik::Kirmizi => 45,
-            Isik::Sari    => 4,
-            Isik::Yesil   => 30,
+            TrafficLight::Red    => 45,
+            TrafficLight::Yellow => 4,
+            TrafficLight::Green  => 30,
         }
     }
 }
@@ -55,12 +55,12 @@ Enum'un en doğal işi: bir şeyin **hangi durumda** olduğunu tutmak ve geçiş
 yerde toplamak.
 
 ```rust
-impl Isik {
-    fn sonraki(&self) -> Isik {
+impl TrafficLight {
+    fn next(&self) -> TrafficLight {
         match self {
-            Isik::Kirmizi => Isik::Yesil,
-            Isik::Yesil   => Isik::Sari,
-            Isik::Sari    => Isik::Kirmizi,
+            TrafficLight::Red    => TrafficLight::Green,
+            TrafficLight::Green  => TrafficLight::Yellow,
+            TrafficLight::Yellow => TrafficLight::Red,
         }
     }
 }
@@ -74,26 +74,26 @@ Buraya kadar olan kısım C'nin enum'u ile aynı. Rust'ın farkı: **her varyant
 verisini taşıyabilir** ve varyantlar birbirine benzemek zorunda değildir.
 
 ```rust
-enum Sekil {
-    Nokta,                              // veri yok
-    Cember { r: f64 },                  // isimli alan
-    Dikdortgen { en: f64, boy: f64 },   // iki isimli alan
-    Ucgen(f64, f64, f64),               // isimsiz üçlü
+enum Shape {
+    Dot,                                    // veri yok
+    Circle { r: f64 },                      // isimli alan
+    Rectangle { width: f64, height: f64 },  // iki isimli alan
+    Triangle(f64, f64, f64),                // isimsiz üçlü
 }
 ```
 
 Tek cümleyle: **`struct` bir "ve"dir** (hem `x` hem `y`), **`enum` bir "veya"dır**
-(ya `Cember` ya `Ucgen`). Bu yüzden enum'a *sum type* deniyor.
+(ya `Circle` ya `Triangle`). Bu yüzden enum'a *sum type* deniyor.
 
 Veriyi çıkarmak yine `match` ile olur; desen hem hangisi olduğunu söyler hem içindekini verir:
 
 ```rust
-fn alan(&self) -> f64 {
+fn area(&self) -> f64 {
     match self {
-        Sekil::Nokta                  => 0.0,
-        Sekil::Cember { r }           => 3.14159 * r * r,
-        Sekil::Dikdortgen { en, boy } => en * boy,
-        Sekil::Ucgen(a, b, c)         => { ... }
+        Shape::Dot                         => 0.0,
+        Shape::Circle { r }                => 3.14159 * r * r,
+        Shape::Rectangle { width, height } => width * height,
+        Shape::Triangle(a, b, c)           => { ... }
     }
 }
 ```
@@ -112,8 +112,8 @@ let baz = "X";        // derlenir, çalışır, sessizce saçmalar
 Enum'la:
 
 ```rust
-enum Baz { A, T, G, C }
-let baz = Baz::X;     // E0599 — böyle bir varyant yok
+enum Base { A, T, G, C }
+let baz = Base::X;     // E0599 — böyle bir varyant yok
 ```
 
 Fark, hatanın **ne zaman** yakalandığı: metinde çalışma zamanında (belki de hiç),
@@ -159,7 +159,7 @@ Yani "olmayabilir" bilgisi yorumda, dokümanda ya da isim geleneğinde değil,
 **imzada** durur:
 
 ```rust
-fn ilk_negatif(s: &[i32]) -> Option<i32>
+fn first_negative(s: &[i32]) -> Option<i32>
 ```
 
 Bu imzayı okuyan herkes sonucun boş gelebileceğini bilir. `-> i32` yazsaydınız
@@ -262,8 +262,8 @@ Sonuç: Rust'ta nullable pointer bedavadır.
 ## Kenar not 2 — sayısal değer
 
 ```rust
-enum HttpDurum { Tamam = 200, Bulunamadi = 404 }
-HttpDurum::Bulunamadi as i32      // 404
+enum HttpStatus { Success = 200, NotFound = 404 }
+HttpStatus::NotFound as i32      // 404
 ```
 
 Sadece **veri taşımayan** enum'larda çalışır, C uyumluluğu için vardır.

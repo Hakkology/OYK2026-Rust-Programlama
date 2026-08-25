@@ -2,48 +2,48 @@
 // rustc main.rs && ./main
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Isik {
-    Kirmizi,
-    Sari,
-    Yesil,
+enum TrafficLight {
+    Red,
+    Yellow,
+    Green,
 }
 
 #[derive(Debug)]
-enum Sekil {
-    Cember { r: f64 },
-    Dikdortgen { en: f64, boy: f64 },
-    Ucgen(f64, f64, f64),
+enum Shape {
+    Circle { r: f64 },
+    Rectangle { width: f64, height: f64 },
+    Triangle(f64, f64, f64),
 }
 
 // oyun/arayuz olaylari - varyantlar farkli sekilde
 #[derive(Debug)]
-enum Olay {
-    Tus(char),
-    Tiklama { x: i32, y: i32 },
-    Kaydirma(i32),
-    Cikis,
+enum Event {
+    Key(char),
+    Click { x: i32, y: i32 },
+    Scroll(i32),
+    Quit,
 }
 
 // satranc karesi
 #[derive(Debug)]
-struct Kare {
-    satir: u8,
-    sutun: u8,
+struct Square {
+    row: u8,
+    col: u8,
 }
 
 fn main() {
     // EXHAUSTIVENESS - tum varyantlar ele alinmak zorunda
-    for isik in [Isik::Kirmizi, Isik::Sari, Isik::Yesil] {
+    for isik in [TrafficLight::Red, TrafficLight::Yellow, TrafficLight::Green] {
         let davranis = match isik {
-            Isik::Kirmizi => "dur",
-            Isik::Sari => "hazirlan",
-            Isik::Yesil => "gec",
+            TrafficLight::Red => "dur",
+            TrafficLight::Yellow => "hazirlan",
+            TrafficLight::Green => "gec",
             // birini silin -> E0004 non-exhaustive patterns
         };
         print!("{:?}->{} ", isik, davranis);
     }
     println!();
-    let isik = Isik::Sari;
+    let isik = TrafficLight::Yellow;
 
     // deger ve ARALIK desenleri
     for zar in 1..=6 {
@@ -105,51 +105,51 @@ fn main() {
 
     // STRUCT destructuring - bazi alanlari sabitle, bazilarini yakala
     let kareler = [
-        Kare { satir: 1, sutun: 4 },
-        Kare { satir: 8, sutun: 8 },
-        Kare { satir: 5, sutun: 3 },
+        Square { row: 1, col: 4 },
+        Square { row: 8, col: 8 },
+        Square { row: 5, col: 3 },
     ];
     for k in &kareler {
         match k {
-            Kare { satir: 1, sutun } => println!("beyaz taban, {}. sutun", sutun),
-            Kare { satir: 8, sutun } => println!("siyah taban, {}. sutun", sutun),
-            Kare { satir, .. } => println!("{}. sirada bir kare", satir),
+            Square { row: 1, col } => println!("beyaz taban, {}. sutun", col),
+            Square { row: 8, col } => println!("siyah taban, {}. sutun", col),
+            Square { row, .. } => println!("{}. sirada bir kare", row),
         }
     }
 
     // ENUM destructuring - varyantin verisini cikar
     let olaylar = vec![
-        Olay::Tus('q'),
-        Olay::Tiklama { x: 120, y: 45 },
-        Olay::Kaydirma(-3),
-        Olay::Cikis,
+        Event::Key('q'),
+        Event::Click { x: 120, y: 45 },
+        Event::Scroll(-3),
+        Event::Quit,
     ];
     for o in &olaylar {
         match o {
-            Olay::Tus(k) => println!("tusa basildi: {}", k),
-            Olay::Tiklama { x, y } => println!("tiklama: ({}, {})", x, y),
-            Olay::Kaydirma(miktar) if *miktar < 0 => println!("asagi kaydirma: {}", miktar),
-            Olay::Kaydirma(miktar) => println!("yukari kaydirma: {}", miktar),
-            Olay::Cikis => println!("cikis"),
+            Event::Key(k) => println!("tusa basildi: {}", k),
+            Event::Click { x, y } => println!("tiklama: ({}, {})", x, y),
+            Event::Scroll(miktar) if *miktar < 0 => println!("asagi kaydirma: {}", miktar),
+            Event::Scroll(miktar) => println!("yukari kaydirma: {}", miktar),
+            Event::Quit => println!("cikis"),
         }
     }
 
     // match hem "hangisi" sorusunu cevaplar hem icindekini cikarir
     let sekiller = vec![
-        Sekil::Cember { r: 1.5 },
-        Sekil::Dikdortgen { en: 2.0, boy: 5.0 },
-        Sekil::Ucgen(3.0, 4.0, 5.0),
+        Shape::Circle { r: 1.5 },
+        Shape::Rectangle { width: 2.0, height: 5.0 },
+        Shape::Triangle(3.0, 4.0, 5.0),
     ];
     for s in &sekiller {
-        let alan = match s {
-            Sekil::Cember { r } => 3.14159 * r * r,
-            Sekil::Dikdortgen { en, boy } => en * boy,
-            Sekil::Ucgen(a, b, c) => {
+        let area = match s {
+            Shape::Circle { r } => 3.14159 * r * r,
+            Shape::Rectangle { width, height } => width * height,
+            Shape::Triangle(a, b, c) => {
                 let p = (a + b + c) / 2.0;
                 (p * (p - a) * (p - b) * (p - c)).sqrt()
             }
         };
-        println!("{:<32} alan={:.2}", format!("{:?}", s), alan);
+        println!("{:<32} alan={:.2}", format!("{:?}", s), area);
     }
 
     // if let - tek dalla ilgileniyorsak
@@ -160,8 +160,8 @@ fn main() {
 
     // let else - eslesmezse ERKEN CIK, gerisi duz aksin
     let kayitlar = vec![21.5, 22.0, 19.8];
-    ortalama_yazdir(&kayitlar);
-    ortalama_yazdir(&[]);
+    print_average(&kayitlar);
+    print_average(&[]);
 
     // while let - eslestigi surece don
     let mut yigin = vec![1, 2, 3];
@@ -171,7 +171,7 @@ fn main() {
     println!();
 
     // matches! - sadece "esliyor mu", bool doner
-    println!("{} {}", matches!(isik, Isik::Sari), matches!(isik, Isik::Yesil));
+    println!("{} {}", matches!(isik, TrafficLight::Yellow), matches!(isik, TrafficLight::Green));
 
     // DESENDE SAHIPLIK - & ile odunc, & olmadan tasima
     let sahipli = Some(String::from("veri"));
@@ -188,18 +188,18 @@ fn main() {
     // println!("{:?}", sahipli);       // E0382 - tasindi
 
     // match bir IFADEDIR - tum kollarin tipi ayni olmali
-    let sure = match Isik::Kirmizi {
-        Isik::Kirmizi => 45,
-        Isik::Sari => 4,
-        Isik::Yesil => 30,
+    let sure = match TrafficLight::Red {
+        TrafficLight::Red => 45,
+        TrafficLight::Yellow => 4,
+        TrafficLight::Green => 30,
     };
     println!("sure = {}", sure);
 
-    // Isik'a yeni bir varyant eklerseniz bu dosyadaki TUM match'ler derlenmez.
+    // TrafficLight'a yeni bir varyant eklerseniz bu dosyadaki TUM match'ler derlenmez.
     // Derleyici size yapilacaklar listesi cikarir - _ yazsaydiniz cikarmazdi.
 }
 
-fn ortalama_yazdir(olcumler: &[f64]) {
+fn print_average(olcumler: &[f64]) {
     // ilk olcum yoksa devam etmenin anlami yok - erken cik
     let Some(ilk) = olcumler.first() else {
         println!("olcum yok");
