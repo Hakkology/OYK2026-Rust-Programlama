@@ -80,7 +80,13 @@ macro_rules! impl_max {
 }
 impl_max!(u8, u16, u32, i8, i16, i32);
 
-// --- 7) stringify!: ismi METIN olarak kullanmak ---
+// --- 7) TT MUNCHER: ozyinelemeli makro, token'lari tek tek yer ---
+macro_rules! token_say {
+    () => { 0 };                                             // taban durum
+    ($ilk:tt $($geri:tt)*) => { 1 + token_say!($($geri)*) };  // birini ye, kalani devret
+}
+
+// --- 8) stringify!: ismi METIN olarak kullanmak ---
 macro_rules! print_and_eval {
     ($ifade:expr) => {
         println!("{:>18} = {}", stringify!($ifade), $ifade);
@@ -116,6 +122,11 @@ fn main() {
     // makroyla uretilen impl'ler
     println!("u8::max_value  = {}", <u8 as MaxValue>::max_value());
     println!("i32::max_value = {}", <i32 as MaxValue>::max_value());
+
+    // TT muncher - tt en ilkel yapitasi: tek token ya da parantezli grup
+    println!("token_say!()      = {}", token_say!());
+    println!("token_say!(a b c) = {}", token_say!(a b c));
+    println!("token_say!(1 + 2) = {}   (uc token: 1, +, 2)", token_say!(1 + 2));
 
     // stringify
     print_and_eval!(2 + 3 * 4);

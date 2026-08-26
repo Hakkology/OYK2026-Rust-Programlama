@@ -28,6 +28,44 @@ sql!(SELECT * FROM users)   // 3. fonksiyon benzeri — kendi sözdizimini kurar
 Attribute makro ise işaretlediği öğeyi tamamen yeniden yazabilir — web çatılarının
 `#[tokio::main]`, `#[get("/")]` gibi şeyleri böyle çalışır.
 
+## `#[...]` yazan her şey makro değildir
+
+`Result`'ın std kaynağındaki tanımına bakınca şunu görürsünüz:
+
+```rust
+#[doc(search_unbox)]
+#[derive(Copy, Debug, Hash)]
+#[derive_const(PartialEq, PartialOrd, Eq, Ord)]
+#[must_use = "this `Result` may be an `Err` variant, which should be handled"]
+#[rustc_diagnostic_item = "Result"]
+#[stable(feature = "rust1", since = "1.0.0")]
+pub enum Result<T, E> {
+    #[lang = "Ok"]
+    Ok(T),
+    #[lang = "Err"]
+    Err(E),
+}
+```
+
+Hepsinin yazımı aynı (`#[...]`, genel adı **attribute**) ama işleri üç ayrı gruba düşer:
+
+| Satır | Ne yapar | Türü |
+|---|---|---|
+| `#[derive(Copy, Debug, Hash)]` | trait implementasyonlarını **üretir** | **makro** (derive) |
+| `#[derive_const(...)]` | `const` bağlamda çalışan implementasyonlar üretir | **makro** (deneysel) |
+| `#[must_use = "..."]` | dönen değer kullanılmazsa uyarı verdirir | derleyici direktifi |
+| `#[doc(...)]` ve `///` | rustdoc'a talimat (`///` = `#[doc = "..."]`) | araç direktifi |
+| `#[rustc_diagnostic_item = "Result"]` | derleyici/Clippy bu tipi adıyla tanısın | **std'ye özel** iç etiket |
+| `#[lang = "Ok"]` | `?` gibi dil yapıları bu varyanta bağlansın | **std'ye özel** lang item |
+| `#[stable(feature, since)]` | kararlılık ve sürüm kaydı | **std'ye özel** |
+
+Ayrım şu: **makro kod üretir, direktif davranış değiştirir.** `#[derive(Debug)]`
+silerseniz `{:?}` çalışmaz (üretilen kod kaybolur); `#[must_use]` silerseniz kod aynen
+derlenir, sadece uyarı gelmez.
+
+Son üç satır sizin kodunuzda kullanılamaz — nightly ve özel derleyici izinleri ister.
+Std kaynağını okurken onları "bu satır bize değil, derleyiciye ait" diye geçin.
+
 ## Neden ayrı crate?
 
 ```toml

@@ -9,6 +9,43 @@ fonksiyon olsaydı `println!("{}", a)` ile `println!("{} {}", a, b)` aynı imzay
 Makro, derleyiciye **kod yazdıran koddur**: derleme sırasında genişler, ürettiği kod
 normal Rust olarak derlenir. Sonunda `!` gören her şey makrodur.
 
+## Makro derlemenin neresinde çalışır
+
+Gün 1'deki `rustc` boru hattını hatırlayın; makro açılımı orada belli bir yerde durur:
+
+```
+kaynak kod (.rs)
+  │
+  ├── Lexer + Parser ──────► AST        söz dizimi ağacı
+  │
+  ├── Ad çözümleme ────────► HIR        ◄── MAKROLAR BURADA AÇILIR
+  │
+  ├── Tip denetimi ────────► MIR        borrow check
+  │
+  ├── Çeviri ──────────────► LLVM IR
+  │
+  └── Kod üretimi ─────────► makine kodu
+```
+
+Buradan çıkan üç sonuç var ve üçü de makroların davranışını açıklar:
+
+**1. Makro tipleri görmez.** Açılım, tip denetiminden **önce** biter. Makroya gelen şey
+token'dır; `42` ile `"metin"` onun için aynı kategoridedir (`expr`). Bu yüzden makro
+kolları tipe göre ayrışamaz.
+
+**2. Makro geçerli söz dizimi üretmek zorundadır, doğru kod üretmek zorunda değildir.**
+Ürettiği kodun tip güvenliği ve ödünç kuralları **sonraki** aşamalarda denetlenir. Yani
+makronuz derlenir ama ürettiği kod tip hatası verebilir.
+
+**3. Hata mesajları açılmış koda bakar.** Derleyici sizin yazdığınız `avec![...]`
+satırını değil, onun yerine geçen kodu denetler. Makro hatalarının okunması bu yüzden
+zordur; ilk yapılacak iş üretilen kodu görmektir:
+
+```
+cargo install cargo-expand
+cargo expand
+```
+
 ## `macro_rules!` anatomisi
 
 ```rust
@@ -37,8 +74,14 @@ Gelenek: `vec![]` köşeli, `println!()` yuvarlak, `macro_rules!{}` süslü.
 | `stmt` | bir deyim |
 | `path` | `std::io::Read` |
 | `tt` | tek bir token ağacı — en esnek, en zor |
+| `item` | bir öğe — `fn`, `struct`, `impl` bloğu |
+| `meta` | öznitelik içi — `derive(Debug)` |
+| `vis` | görünürlük — `pub`, `pub(crate)` |
+| `lifetime` | `'a` |
 
-En çok `expr` ve `ident` kullanılır.
+En çok `expr` ve `ident` kullanılır. Seçim önemlidir: `expr` yakalarsanız derleyici
+gelen şeyi **ifade olarak ayrıştırır** ve bütünlüğünü korur; `tt` yakalarsanız ham
+token alırsınız (aşağıdaki parantez tuzağı tam olarak bu farktan çıkıyor).
 
 ```rust
 macro_rules! type_alias {
@@ -47,12 +90,44 @@ macro_rules! type_alias {
 type_alias!(u32 => Counter);
 ```
 
-## Tekrar
+## Tek tek: `$( $eleman:expr ),* $(,)?`
+
+Bu satır makro öğrenirken en çok korkutan şey; hâlbuki beş parçadan ibaret:
+
+| Parça | Ne demek |
+|---|---|
+| `$` | "burada bir makro değişkeni var" işareti |
+| `$eleman` | yakalanan şeye **sizin verdiğiniz ad** — `$x`, `$sayi`, ne isterseniz |
+| `:expr` | **ne tür** bir şey yakalanacağı (fragment specifier) |
+| `$( ... )` | içindeki desen **tekrarlanabilir** |
+| `,*` | `*`'dan hemen önceki karakter **ayırıcıdır**: virgülle ayrılmış, sıfır veya daha fazla |
+| `$(,)?` | sondaki **fazladan virgüle izin ver** (sıfır veya bir tane) |
+
+Yani `avec![1, 2, 3]` ve `avec![1, 2, 3,]` ikisi de tutar, `avec![]` de tutar.
+
+### Tekrar işaretleri
 
 ```
 $( ... ),*     virgülle ayrılmış SIFIR veya daha fazla
 $( ... ),+     virgülle ayrılmış BİR veya daha fazla
-$( ... )?      sıfır veya bir
+$( ... );*     noktalı virgülle ayrılmış (ayırıcı istediğiniz token olabilir)
+$( ... )*      ayırıcısız tekrar
+$( ... )?      sıfır veya bir — **ayırıcı ALAMAZ**
+```
+
+`$( $x:expr ),?` yazarsanız derlenmez:
+
+```
+error: the `?` macro repetition operator does not take a separator
+```
+
+Sebebi mantıklı: en fazla bir tane şey varsa arasına ayıracak bir şey yoktur.
+
+Gövde tarafında da aynı sarmalı kullanırsınız; yakalanan her parça için o satır
+yeniden üretilir:
+
+```rust
+$( v.push($eleman); )*      // üç eleman geldiyse üç push satırı
 ```
 
 Düzenli ifadelerdeki `*` ve `+` ile aynı mantık. Yakalanan her parça için gövde tekrar
@@ -120,6 +195,42 @@ Aynı üç satır, üç farklı sonuç: C → 11, Rust `tt` → 11, Rust `expr` 
 **Kural: elinizde bir ifade varsa `expr` yakalayın.** `tt` en esnek yakalamadır ama
 ifade bütünlüğünü korumaz; gerçekten token'larla oynamanız gerekmedikçe kullanmayın.
 
+## Makro, aşırı yükleme (overloading) değildir
+
+Çok kollu makro görünce akla ilk gelen şey bu oluyor, ama değil. Kollar **tipe göre
+değil, biçime göre** ayrışır:
+
+```rust
+macro_rules! t {
+    ($x:expr) => { "tek ifade" };
+    ($x:expr, $y:expr) => { "iki ifade" };
+}
+
+t!(42)        // "tek ifade"
+t!("metin")   // "tek ifade"   <- tip farklı ama AYNI kol
+t!(1, 2)      // "iki ifade"   <- argüman sayısı farklı, kol da farklı
+```
+
+`42` ile `"metin"` aynı kola düşüyor, çünkü ikisi de birer `expr`. Makro tipleri
+görmez; makro genişlediğinde ortada henüz tip denetimi yoktur, sadece token vardır.
+
+Rust'ta aşırı yükleme **yoktur** ve bu bilinçli bir karardır. "Aynı işi farklı tipler
+için yapmak" istediğinizde doğru araçlar şunlardır:
+
+| İhtiyaç | Rust'taki karşılığı |
+|---|---|
+| farklı tipleri kabul eden tek fonksiyon | trait sınırı: `fn f(x: impl Into<String>)` |
+| aynı işi farklı tipler için tanımlamak | trait implementasyonu (`impl From<A> for B`) |
+| değişken sayıda argüman | **makro** — `println!`, `vec!` |
+| isteğe bağlı parametreler | `Option` parametre ya da builder |
+
+Yani makro, aşırı yüklemenin değil, **değişken argüman sayısının** cevabıdır.
+
+Akılda kalacak cümle:
+
+> **Rust'ta method overloading yoktur.** Arity ve söz dizimi esnekliği için **makrolar**,
+> tip bazlı çok biçimlilik için **trait ve generic'ler** kullanılır.
+
 ## Hijyen — C'de olmayan şey
 
 ```rust
@@ -139,8 +250,14 @@ macro_rules! no_pollution {
 }
 ```
 
-Rust makroları hijyeniktir: makro içinde üretilen isimler ayrı bir "renk" taşır.
-C'de bu yüzden `_tmp_1234` gibi isimler uydurulur; Rust'ta gerek yok.
+Rust makroları **kısmen hijyeniktir** (partially hygienic): derleyici makro içinde
+tanımlanan isimlere ayrı bir bağlam etiketi (`SyntaxContext`) verir, böylece o isimler
+çağrıldıkları yerdeki isimlerle çakışmaz. C'de bu yüzden `_tmp_1234` gibi isimler
+uydurulur; Rust'ta gerek yok.
+
+"Kısmen" demesinin sebebi: yerel değişken adları hijyeniktir, ama tip adları, fonksiyon
+adları ve `$ident` ile **dışarıdan aldığınız** isimler çağrıldıkları bağlamda çözülür —
+zaten `increment!(sayac)` örneğinin çalışmasının sebebi de budur.
 
 ## Dışa açmak: `#[macro_export]` ve `$crate`
 
@@ -176,6 +293,27 @@ impl_max!(u8, u16, u32, i8, i16, i32);
 ```
 
 Altı tip için altı `impl` bloğu — elle yazsanız otuz satır, üstelik biri unutulur.
+
+## TT muncher — token'ları tek tek yemek
+
+Makrolar **özyinelemeli** olabilir. Karmaşık söz dizimlerini çözmenin klasik yolu,
+token'ları baştan bir bir tüketip kalanı kendine geri vermektir; buna *token tree
+muncher* denir:
+
+```rust
+macro_rules! token_say {
+    () => { 0 };                                        // taban durum
+    ($ilk:tt $($geri:tt)*) => { 1 + token_say!($($geri)*) };  // birini ye, kalanı devret
+}
+
+token_say!()        // 0
+token_say!(a b c)   // 3
+token_say!(1 + 2)   // 3   — üç token: 1, +, 2
+```
+
+`tt` en ilkel yapıtaşıdır: tek bir token ya da parantezle çevrili bir grup. Kendi küçük
+dilinizi (DSL) yazacaksanız yöntem budur — ama hata mesajları hızla okunmaz hâle gelir,
+o yüzden gerçekten gerekmedikçe uzak durun.
 
 ## Ne zaman makro yazmalı
 
