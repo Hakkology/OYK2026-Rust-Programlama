@@ -1,0 +1,4 @@
+# Workspace: iki crate birlikte derlenir, ortak target/ kullanir
+[workspace]
+resolver = "2"
+members = ["etiket_derive", "kullanan"]

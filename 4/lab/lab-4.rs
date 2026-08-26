@@ -96,7 +96,10 @@ impl Point {
 
     // TODO 2c: fn quadrant(&self) -> u8
     //          noktanin hangi ceyrekte oldugunu dondursun (1-4), eksen uzerindeyse 0
-    //          ipucu: match (self.x > 0.0, self.y > 0.0)
+    //          DIKKAT: iki bool'un DORT hali vardir, "eksen uzerinde" BESINCI durum.
+    //          Yani tek basina match (x > 0.0, y > 0.0) yetmez - once ekseni eleyin:
+    //            if self.x == 0.0 || self.y == 0.0 { return 0; }
+    //            match (self.x > 0.0, self.y > 0.0) { ... }
 }
 
 fn lab_2_geometri() {
@@ -144,6 +147,23 @@ impl TrafficLight {
             TrafficLight::Yellow => TrafficLight::Red,
         }
     }
+
+    fn seconds(&self) -> u32 {
+        match self {
+            TrafficLight::Red => 45,
+            TrafficLight::Yellow => 4,
+            TrafficLight::Green => 30,
+        }
+    }
+}
+
+// enum'lar uzerinde serbest fonksiyon da yazilabilir
+fn behaviour(light: &TrafficLight) -> &str {
+    match light {
+        TrafficLight::Red => "dur",
+        TrafficLight::Yellow => "hazirlan",
+        TrafficLight::Green => "gec",
+    }
 }
 
 fn lab_3_enum() {
@@ -151,7 +171,7 @@ fn lab_3_enum() {
 
     let mut isik = TrafficLight::Red;
     for _ in 0..4 {
-        print!("{:?} -> ", isik);
+        print!("{:?}({} sn, {}) -> ", isik, isik.seconds(), behaviour(&isik));
         isik = isik.next();
     }
     println!("{:?}", isik);
@@ -165,9 +185,12 @@ fn lab_3_enum() {
     //          fn complement(b: &Base) -> Base    (A-T, G-C eslesir)
     //          fn complement_strand(d: &[Base]) -> Vec<Base>
     //          Sonra dizinin GC oranini yuzde olarak yazdirin.
+    //          ipucu: karsilastirma icin matches!(b, Base::G | Base::C)
+    //                 ya da enum'a #[derive(PartialEq)] ekleyin
 
     // TODO 3d: TrafficLight'a Blinking diye YENI bir varyant ekleyin ve derleyin.
-    //          Kac ayri yerde hata aldiniz? Hata kodu neydi?
+    //          Bu dosyada TrafficLight'i ele alan UC match var (next, seconds, behaviour).
+    //          Kac tanesi hata verdi? Hata kodu neydi?
     //          Ayni deneyi `_ => ...` dali ekleyerek tekrarlayin - ne degisti?
     //          Dersin en onemli sorusu bu: derleyici sizin icin ne yapti?
 }

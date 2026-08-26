@@ -1,0 +1,9 @@
+[package]
+name = "etiket_derive"
+version = "0.1.0"
+edition = "2021"
+
+# BU SATIR OLMADAN prosedurel makro yazilamaz.
+# proc-macro crate'i sadece makro barindirir, baska sey export edemez.
+[lib]
+proc-macro = true
