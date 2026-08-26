@@ -159,6 +159,6 @@ fn main() {
 
     // her halka self'i TUKETIR - ara degisken iki zincire sokulamaz
     // let ara = Character::new("Ork").health(50);
-    // let bir = ara.saldiri(20);
-    // let iki = ara.ucabilir();        // E0382 - ara tasindi
+    // let bir = ara.attack(20);
+    // let iki = ara.can_fly();         // E0382 - ara tasindi
 }

@@ -1,4 +1,4 @@
-//! Prosedurel makro ornegi: #[derive(Etiket)]
+//! Prosedurel makro ornegi: #[derive(Label)]
 //!
 //! Prosedurel makro, DERLEME ZAMANINDA CALISAN normal Rust kodudur.
 //! Girdisi bir token akisi, ciktisi da bir token akisidir.
@@ -7,9 +7,9 @@
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(Etiket)]
-pub fn etiket_turet(girdi: TokenStream) -> TokenStream {
-    // girdi: "struct Rover { ad: String, mesafe_km: f64 }" gibi bir token akisi
+#[proc_macro_derive(Label)]
+pub fn derive_label(girdi: TokenStream) -> TokenStream {
+    // girdi: "struct Rover { name: String, distance_km: f64 }" gibi bir token akisi
     let kaynak = girdi.to_string();
 
     // --- 1) tip adini bul ---
@@ -27,7 +27,7 @@ pub fn etiket_turet(girdi: TokenStream) -> TokenStream {
     // Vec<(u8, u8)> gibi bir alan bu sayimi bozar.
     let govde = kaynak.find('{').map(|i| &kaynak[i + 1..]).unwrap_or("");
     let govde = govde.trim_end_matches('}');
-    let alan_sayisi = if govde.trim().is_empty() {
+    let field_count = if govde.trim().is_empty() {
         0
     } else {
         govde.matches(':').count()
@@ -38,10 +38,10 @@ pub fn etiket_turet(girdi: TokenStream) -> TokenStream {
         r#"
         impl {ad} {{
             /// Bu metodu {ad} icin derleyici degil, MAKRO yazdi.
-            pub fn tip_adi() -> &'static str {{ "{ad}" }}
-            pub fn alan_sayisi() -> usize {{ {alan_sayisi} }}
-            pub fn etiket(&self) -> String {{
-                format!("[{ad} / {alan_sayisi} alan]")
+            pub fn type_name() -> &'static str {{ "{ad}" }}
+            pub fn field_count() -> usize {{ {field_count} }}
+            pub fn label(&self) -> String {{
+                format!("[{ad} / {field_count} alan]")
             }}
         }}
         "#

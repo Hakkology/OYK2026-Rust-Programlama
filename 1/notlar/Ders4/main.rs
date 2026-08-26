@@ -5,6 +5,9 @@
 fn main() {
     // varsayilan degismezlik, mut istisna
     let x = 10;
+    // ilk deger okunmadan uzerine yaziliyor - derleyici hakli olarak uyarir,
+    // ama biz kasten gosteriyoruz: mut olan degisken yeniden atanabilir
+    #[allow(unused_assignments)]
     let mut y = 10;
     y = 20;
     println!("{} {}", x, y);
@@ -130,6 +133,8 @@ fn main() {
     println!("{}", "42".parse::<i32>().unwrap());
 
     // &str pencere, String sahip
+    // ilk deger okunmadan degisiyor - uyari dogru, gosterdigimiz sey de bu
+    #[allow(unused_assignments)]
     let mut camp: &str = "OYK";
     camp = "OYK CAMP";
     println!("{}", camp);
@@ -137,6 +142,7 @@ fn main() {
     let bos_s = String::new();
     println!("{:?}", bos_s);
 
+    #[allow(unused_assignments)]
     let mut icerik = String::from("OYK");
     icerik = 234423.to_string();
     println!("{:?}", icerik);

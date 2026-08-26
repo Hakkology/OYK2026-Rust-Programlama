@@ -98,7 +98,7 @@ fn main() {
     // self alan metot TUKETIR
     let gecici = Point::new(1.5, -2.5);
     println!("{}", gecici.into_text());
-    // println!("{}", gecici.x);        // E0382 - metne_cevir yuttu
+    // println!("{}", gecici.x);        // E0382 - into_text yuttu
 
     // ---- gercek veriyle ----
     let dunya = Planet::new("Dunya", 6371.0, 1, 1.00);
@@ -124,6 +124,10 @@ fn main() {
     // println!("{}", dunya.name);                    // 2) E0382 borrow of moved value
     // yut_gezegen(dunya);                            // 3) E0382 use of partially moved value
     // .. butunu goturmez, sadece Copy olmayan alani (name) tasir.
+
+    // sahipligi alan fonksiyon: mars buraya TASINIR
+    yut_gezegen(mars);
+    // println!("{}", mars.name);       // E0382 - mars tasindi
 
     // tuple struct - ayni f64 ama AYRI tipler
     let yukseklik = Meters(8848.0);

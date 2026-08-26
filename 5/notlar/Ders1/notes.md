@@ -55,6 +55,20 @@ Panic üretmenin yolları: `panic!`, `unreachable!`, `todo!`, `unimplemented!`, 
 `expect("neden olamaz")` yazın; altı ay sonra kendinize açıklama olur. Panik mesajı
 "called `Result::unwrap()` on an `Err` value" yerine sizin cümleniz olur.
 
+**`unwrap` tek yol değil, hatta son çare.** Tercih sırası şudur:
+
+| Önce şunu deneyin | Ne zaman |
+|---|---|
+| `match` / `if let` | iki durumu da anlamlı biçimde ele alabiliyorsanız |
+| `unwrap_or(x)` | hata olursa kullanılacak bir varsayılan varsa |
+| `unwrap_or_else(\|e\| ...)` | varsayılan pahalıysa ya da hataya bakıp karar verecekseniz |
+| `expect("...")` | gerçekten devam edilemezse — ama sebebini yazarak |
+| `unwrap()` | en sonda; sebebi yazmaya bile değmiyorsa |
+
+Öğrenirken `unwrap` kolay geldiği için refleks hâline gelir; sonra üretim kodunda
+gece yarısı panik olarak geri döner. `main.rs`'te altı yol da yan yana duruyor,
+ikisi bilerek yorumlu — yorumu açıp panik çıktısını görün.
+
 ## Hata tipini `enum` yapmak
 
 `Result<T, String>` çalışır ama çağıran hatayı **ayırt edemez** — elinde bir metin vardır,
@@ -82,8 +96,41 @@ olduğunu söyleyelim" arasındaki fark.
 | `expect("...")` | aynısı, panik mesajını siz yazarsınız |
 | `unwrap_or(varsayılan)` | `Err` ise varsayılanı döndürür |
 | `unwrap_or_else(\|e\| ...)` | varsayılanı hesaplayarak üretir |
+| `unwrap_or_default()` | tipin sıfır değerini verir (`f64` için `0.0`) |
 | `ok()` | `Result` → `Option`, **hatayı çöpe atar** |
-| `map_err(\|e\| ...)` | hata tipini dönüştürür, `Ok` tarafına dokunmaz |
+| `map(\|v\| ...)` | **başarı** değerini dönüştürür, `Err` tarafına dokunmaz |
+| `map_err(\|e\| ...)` | **hata** değerini dönüştürür, `Ok` tarafına dokunmaz |
+
+### `map` ve `map_err` — kutunun içini değiştirmek
+
+`Result` bir kutudur; iki gözü vardır. `map` **başarı gözünü**, `map_err` **hata gözünü**
+dönüştürür; diğerine dokunmaz:
+
+```rust
+let r: Result<f64, TelemetryError> = parse_temperature("sicaklik=-63.2");
+
+r.map(|c| c * 9.0 / 5.0 + 32.0)          // Ok(-63.2) -> Ok(-81.76), Err aynen geçer
+ .map_err(|e| format!("{:?}", e))        // Err(...) -> Err("...") , Ok aynen geçer
+```
+
+Kutuyu açıp kapamadan içeriği değiştiriyorsunuz. `match` yazıp iki kolu da elle
+doldurmaya gerek kalmıyor — çünkü zaten bir kolu olduğu gibi bırakacaktınız.
+
+`Option`'da da aynı `map` var: `Some` ise dönüştürür, `None` ise `None` kalır.
+
+### Bu `|x| ...` nedir?
+
+`map(|c| c * 2.0)` içindeki `|c| c * 2.0` bir **closure**: adı olmayan küçük bir
+fonksiyon. `|` işaretleri arasında parametreleri, sonrasında gövdesi yazılır.
+
+```rust
+|c| c * 2.0                    // bir parametre, tek ifade
+|_| -999.0                     // parametreyi kullanmıyoruz: _
+|e| format!("{:?}", e)         // gövdesi bir ifade
+```
+
+Şimdilik bu kadarı yeter: `map`, `map_err`, `unwrap_or_else` gibi metotlar "ne
+yapacağını" bir closure ile söylersiniz.
 
 Ters yön de var — `Option`'dan `Result`'a geçerken eksik olan "neden" bilgisini
 siz eklersiniz:

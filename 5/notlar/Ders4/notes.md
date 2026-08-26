@@ -41,10 +41,10 @@ Gelenek: `vec![]` köşeli, `println!()` yuvarlak, `macro_rules!{}` süslü.
 En çok `expr` ve `ident` kullanılır.
 
 ```rust
-macro_rules! tip_takma_ad {
+macro_rules! type_alias {
     ($t:ty => $ad:ident) => { type $ad = $t; };
 }
-tip_takma_ad!(u32 => Sayac);
+type_alias!(u32 => Counter);
 ```
 
 ## Tekrar
@@ -123,18 +123,18 @@ ifade bütünlüğünü korumaz; gerçekten token'larla oynamanız gerekmedikçe
 ## Hijyen — C'de olmayan şey
 
 ```rust
-macro_rules! artir {
+macro_rules! increment {
     ($x:ident) => { $x += 1; };
 }
 
 let mut sayac = 0;
-artir!(sayac);      // çalışır: ismi DIŞARIDAN aldık
+increment!(sayac);      // çalışır: ismi DIŞARIDAN aldık
 ```
 
 Ama makronun kendi içinde tanımladığı değişken dışarıyı **kirletmez**:
 
 ```rust
-macro_rules! kirletmez {
+macro_rules! no_pollution {
     () => { let x = 42; };      // buradaki x, dışarıdaki x DEĞİLDİR
 }
 ```
@@ -165,14 +165,14 @@ const C: usize = $crate::say![@SAY; $($eleman),*];
 Makronun en meşru kullanımlarından biri: aynı gövdeyi çok sayıda tip için üretmek.
 
 ```rust
-macro_rules! max_uygula {
+macro_rules! impl_max {
     ( $( $t:ty ),+ ) => {
-        $( impl EnBuyuk for $t {
-               fn en_buyuk() -> Self { <$t>::MAX }
+        $( impl MaxValue for $t {
+               fn max_value() -> Self { <$t>::MAX }
            } )+
     };
 }
-max_uygula!(u8, u16, u32, i8, i16, i32);
+impl_max!(u8, u16, u32, i8, i16, i32);
 ```
 
 Altı tip için altı `impl` bloğu — elle yazsanız otuz satır, üstelik biri unutulur.

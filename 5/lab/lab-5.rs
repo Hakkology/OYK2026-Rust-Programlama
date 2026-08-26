@@ -4,6 +4,9 @@
 //
 // Her gorevde TODO'lari doldurun; ustundeki ORNEK nasil calistigini gosteriyor.
 
+// Iskelet kod: TODO'lar doldurulana kadar kullanilmayan degisken/import uyarilari normal.
+#![allow(unused)]
+
 fn main() {
     lab_1_hata_tipi();
     lab_2_modul();
@@ -71,49 +74,49 @@ fn lab_1_hata_tipi() {
 // ---------------------------------------------------------------------------
 // LAB 2 - Moduller ve gorunurluk
 // ---------------------------------------------------------------------------
-mod gorev {
+mod task {
     // ORNEK: private alan, kontrollu kurucu
-    pub struct Gorev {
-        ad: String,
-        tamamlandi: bool,
+    pub struct Task {
+        name: String,
+        is_done: bool,
     }
 
-    impl Gorev {
-        pub fn yeni(ad: &str) -> Gorev {
-            Gorev { ad: ad.to_string(), tamamlandi: false }
+    impl Task {
+        pub fn new(name: &str) -> Task {
+            Task { name: name.to_string(), is_done: false }
         }
-        pub fn ad(&self) -> &str {
-            &self.ad
+        pub fn name(&self) -> &str {
+            &self.name
         }
-        pub fn tamamla(&mut self) {
-            self.tamamlandi = true;
+        pub fn complete(&mut self) {
+            self.is_done = true;
         }
-        pub fn tamamlandi(&self) -> bool {
-            self.tamamlandi
+        pub fn is_done(&self) -> bool {
+            self.is_done
         }
     }
 
-    // TODO 2a: `rapor` adinda bir ALT MODUL ekleyin.
-    //          Icinde pub fn ozet(g: &Gorev) -> String olsun,
-    //          "Perseverance: tamamlandi" gibi bir metin uretsin.
+    // TODO 2a: `report` adinda bir ALT MODUL ekleyin.
+    //          Icinde pub fn summary(t: &Task) -> String olsun,
+    //          "Krater orneklemesi: tamamlandi" gibi bir metin uretsin.
     //          Ipucu: alt modul ust modulun private alanlarini GORUR.
 
-    // TODO 2b: rapor::ozet'i pub(crate) yapin ve farki gozleyin.
+    // TODO 2b: report::summary'i pub(crate) yapin ve farki gozleyin.
 }
 
 fn lab_2_modul() {
     println!("-- lab 2 --");
-    let mut g = gorev::Gorev::yeni("Krater orneklemesi");
-    println!("{} tamamlandi mi: {}", g.ad(), g.tamamlandi());
-    g.tamamla();
-    println!("{} tamamlandi mi: {}", g.ad(), g.tamamlandi());
+    let mut g = task::Task::new("Krater orneklemesi");
+    println!("{} tamamlandi mi: {}", g.name(), g.is_done());
+    g.complete();
+    println!("{} tamamlandi mi: {}", g.name(), g.is_done());
 
     // TODO 2c: asagidaki satirin yorumunu acin, hata kodunu okuyun, sonra
     //          neden boyle oldugunu bir cumleyle yazin:
-    // let sahte = gorev::Gorev { ad: String::from("x"), tamamlandi: true };
+    // let sahte = task::Task { name: String::from("x"), is_done: true };
 
-    // TODO 2d: lab dosyasinin en ustune `pub use gorev::Gorev;` ekleyip
-    //          burada sadece `Gorev::yeni(...)` yazabilir hale getirin.
+    // TODO 2d: lab dosyasinin en ustune `pub use task::Task;` ekleyip
+    //          burada sadece `Task::new(...)` yazabilir hale getirin.
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +124,7 @@ fn lab_2_modul() {
 // ---------------------------------------------------------------------------
 
 // ORNEK: degisken sayida arguman alan bir makro
-macro_rules! rapor_satiri {
+macro_rules! report_line {
     ( $( $alan:expr ),* $(,)? ) => {{
         let mut s = String::new();
         $(
@@ -133,15 +136,15 @@ macro_rules! rapor_satiri {
 
 fn lab_3_makro() {
     println!("-- lab 3 --");
-    println!("{}", rapor_satiri!("Rover", 29300, true));
+    println!("{}", report_line!("Rover", 29300, true));
 
-    // TODO 3a: `en_kucuk!` makrosu yazin.
-    //          en_kucuk!(3)          -> 3
-    //          en_kucuk!(3, 1, 2)    -> 1
+    // TODO 3a: `min_of!` makrosu yazin.
+    //          min_of!(3)          -> 3
+    //          min_of!(3, 1, 2)    -> 1
     //          Ipucu: iki kol yazin, ikincisi ozyinelemeli olsun:
-    //          ( $ilk:expr, $( $geri:expr ),+ ) => { ... en_kucuk!( $( $geri ),+ ) ... }
+    //          ( $ilk:expr, $( $geri:expr ),+ ) => { ... min_of!( $( $geri ),+ ) ... }
 
-    // TODO 3b: `sicaklik_c!` makrosu yazin: sicaklik_c!(98.6 F) ve sicaklik_c!(37.0 C)
+    // TODO 3b: `to_celsius!` makrosu yazin: to_celsius!(98.6 F) ve to_celsius!(37.0 C)
     //          ikisi de Celsius degeri versin.
     //          Ipucu: birim icin ident yakalayin, iki ayri kol yazin.
 
@@ -150,9 +153,9 @@ fn lab_3_makro() {
     //          macro_rules! kare_tt   { ( $($x:tt)* ) => { $($x)* * $($x)* }; }
     //          Ikisini de kare!(2 + 3) ile cagirin. Sonuclar neden farkli?
 
-    // TODO 3d (ileri): proc_ornek/ klasorundeki #[derive(Etiket)] makrosuna
-    //          `pub fn alan_adlari() -> Vec<&'static str>` uretmesini ekleyin.
-    //          Ipucu: etiket_derive/src/lib.rs icinde govdeyi ':' yerine
+    // TODO 3d (ileri): proc_ornek/ klasorundeki #[derive(Label)] makrosuna
+    //          `pub fn field_names() -> Vec<&'static str>` uretmesini ekleyin.
+    //          Ipucu: label_derive/src/lib.rs icinde govdeyi ':' yerine
     //          alan adlarina gore ayristirmaniz gerekecek.
 }
 
@@ -162,7 +165,7 @@ mod tests {
 
     // ORNEK: sinir degeri testi
     #[test]
-    fn bos_komut_hata_verir() {
+    fn empty_command_errors() {
         assert!(matches!(parse_command(""), Err(RoverError::EmptyCommand)));
     }
 

@@ -50,6 +50,31 @@ fn parse_temperature(line: &str) -> Result<f64, TelemetryError> {
     Ok(sayi)
 }
 
+// fn parse_temperature(line: &str) -> Result<f64, TelemetryError> {
+//     let line = line.trim();
+//     if line.is_empty() {
+//         return Err(TelemetryError::EmptyLine);
+//     }
+
+//     let (alan, deger) = line
+//         .split_once('=')
+//         .filter(|&(k, _)| k == "sicaklik")
+//         .ok_or(TelemetryError::MissingField("sicaklik"))?;
+
+//     let sayi: f64 = deger
+//         .parse()
+//         .map_err(|_| TelemetryError::NotANumber(deger.to_string()))?;
+
+//     if !(-125.0..=20.0).contains(&sayi) {
+//         return Err(TelemetryError::OutOfRange {
+//             field: "sicaklik",
+//             value: sayi,
+//         });
+//     }
+
+//     Ok(sayi)
+// }
+
 fn main() {
     let satirlar = ["sicaklik=-63.2", "sicaklik=abc", "sicaklik=999", "nem=40", "   "];
 
@@ -75,31 +100,83 @@ fn main() {
     let iyi = parse_temperature("sicaklik=-20");
     let kotu = parse_temperature("sicaklik=abc");
 
-    println!("is_ok        {} {}", iyi.is_ok(), kotu.is_ok());
-    println!("unwrap_or    {}", parse_temperature("sicaklik=abc").unwrap_or(0.0));
-    println!("unwrap_or_else {}", parse_temperature("sicaklik=abc").unwrap_or_else(|_| -999.0));
+    println!("{:<18}{} {}", "is_ok", iyi.is_ok(), kotu.is_ok());
+
+    // -----------------------------------------------------------------
+    // KUTUYU ACMANIN YOLLARI - unwrap TEK yol degil, hatta EN KOTU yol
+    // Asagidaki hepsi ayni bozuk girdiyle calisiyor: "sicaklik=abc"
+    // -----------------------------------------------------------------
+
+    // 1) unwrap()  -> Err ise PANIKLER, program orada durur.
+    //    Sadece "burada asla hata olamaz" diyebiliyorsaniz.
+    // println!("{}", parse_temperature("sicaklik=abc").unwrap());
+    //    ^ yorumu acin: thread 'main' panicked ... NotANumber("abc")
+
+    // 2) expect("...")  -> yine panikler AMA mesaji siz yazarsiniz.
+    //    unwrap yerine hep bunu tercih edin: panik ciktisi ise yarar.
+    // println!("{}", parse_temperature("sicaklik=abc").expect("sensor verisi bozuk"));
+
+    // 3) unwrap_or(varsayilan)  -> Err ise varsayilani verir, PANIK YOK.
+    //    "hata olursa su degeri kullan" diyebiliyorsaniz dogru secim.
+    println!("{:<18}{}", "unwrap_or", parse_temperature("sicaklik=abc").unwrap_or(0.0));
+
+    // 4) unwrap_or_else(|e| ...)  -> varsayilani HESAPLAYARAK uretir.
+    //    Varsayilan pahaliysa ya da hataya bakip karar verecekseniz.
+    println!("{:<18}{}", "unwrap_or_else", parse_temperature("sicaklik=abc").unwrap_or_else(|_| -999.0));
+
+    // 5) unwrap_or_default()  -> tipin sifir degerini verir (f64 icin 0.0)
+    println!("{:<18}{}", "unwrap_or_default", parse_temperature("sicaklik=abc").unwrap_or_default());
+
+    // 6) match  -> iki durumu da ELLE ele alirsiniz. En acik, en uzun yol.
+    let secim = match parse_temperature("sicaklik=abc") {
+        Ok(d) => d,
+        Err(_) => {
+            println!("(bozuk olcum atlandi, son gecerli deger kullaniliyor)");
+            -63.2
+        }
+    };
+    println!("{:<18}{}", "match ile", secim);
+
+    // ORNEKLERDE unwrap gorurseniz "burasi kisaltilmis" demektir.
+    // Gercek kodda sirasiyla: match / unwrap_or* / expect. unwrap en sonda.
 
     // ok() Result'i Option'a cevirir - HATA BILGISI COPE GIDER
-    println!("ok()         {:?}", parse_temperature("sicaklik=abc").ok());
+    println!("{:<18}{:?}", "ok()", parse_temperature("sicaklik=abc").ok());
+
+    // map BASARI degerini donusturur, Err tarafina dokunmaz
+    // (|c| ... bir closure: adi olmayan kucuk bir fonksiyon)
+    let fahrenheit = parse_temperature("sicaklik=-40").map(|c| c * 9.0 / 5.0 + 32.0);
+    println!("{:<18}{:?}   (-40 C = -40 F, tek kesisme noktasi)", "map", fahrenheit);
+    // Err ise map hicbir sey yapmaz, hata aynen gecer
+    println!("{:<18}{:?}   (Err ise map hicbir sey yapmaz)", "map + Err", parse_temperature("sicaklik=abc").map(|c| c * 2.0).is_err());
+
+    // Option'da da ayni map var
+    let bos_olcum: Option<f64> = None;
+    println!("{:<18}{:?} {:?}", "Option map", Some(3.0).map(|c: f64| c * 2.0), bos_olcum.map(|c| c * 2.0));
 
     // map_err hata tipini donusturur, Ok tarafina dokunmaz
     let metne: Result<f64, String> =
         parse_temperature("sicaklik=999").map_err(|e| format!("{:?}", e));
-    println!("map_err      {:?}", metne);
+    println!("{:<18}{:?}", "map_err", metne);
+    // ikisi zincirlenebilir: bir goz Ok'i, digeri Err'i isler
+    let zincir: Result<String, String> = parse_temperature("sicaklik=-63.2")
+        .map(|c| format!("{:.1} C", c))
+        .map_err(|e| format!("hata: {:?}", e));
+    println!("{:<18}{:?}", "map + map_err", zincir);
 
     // Option -> Result: eksik olan "neden"i biz ekliyoruz
     let bos: Option<f64> = None;
     let r1: Result<f64, TelemetryError> = bos.ok_or(TelemetryError::EmptyLine);
-    println!("ok_or        {:?}", r1);
+    println!("{:<18}{:?}", "ok_or", r1);
     // ok_or_else TEMBELDIR: hata nesnesi sadece gerekirse uretilir
     let r2: Result<f64, TelemetryError> =
         bos.ok_or_else(|| TelemetryError::NotANumber(String::from("(hesaplandi)")));
-    println!("ok_or_else   {:?}", r2);
+    println!("{:<18}{:?}", "ok_or_else", r2);
 
     // expect: mesaj, "burada asla hata olamaz" varsayiminin BELGESIDIR
     let kesin = parse_temperature("sicaklik=0")
         .expect("sabit metin gecerli, ayristirma basarisiz olamaz");
-    println!("expect       {}", kesin);
+    println!("{:<18}{}", "expect", kesin);
 
     // unwrap yerine expect yazin: panik mesaji sizin cumleniz olur
     // parse_temperature("sicaklik=abc").unwrap();   // panic: NotANumber("abc")

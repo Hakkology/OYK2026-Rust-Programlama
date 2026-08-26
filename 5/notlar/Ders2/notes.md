@@ -41,12 +41,65 @@ Yani **iki iş** birden:
 Ok(Reading::new(parse_field(a)?, parse_field(b)?))
 ```
 
+## `?` iki yerde takılır — mesajları ayırt edin
+
+`?` iki iş yapıyordu: erken dönüş ve tip dönüşümü. İkisi de ayrı ayrı takılabilir ve
+öğrenciye ikisi de "`?` çalışmıyor" diye görünür. Hâlbuki derleyici hangisi olduğunu
+açıkça söylüyor.
+
+### Engel 1 — kap uyuşmazlığı: `Result` mi `Option` mu
+
+```rust
+fn f(s: &str) -> Result<usize, MyError> {
+    let i = s.find('=')?;      // find bir Option döndürür
+    Ok(i)
+}
+```
+
+```
+error[E0277]: the `?` operator can only be used on `Result`s,
+              not `Option`s, in a function that returns `Result`
+```
+
+Sebebi mantıklı: `None` geldiğinde `Err`'in **içine ne konacağı** belli değil. O bilgi
+ortada yok, dolayısıyla onu siz vermelisiniz:
+
+```rust
+let i = s.find('=').ok_or(MyError)?;   // Option -> Result: "neden"i biz ekledik
+```
+
+### Engel 2 — hata tipi uyuşmazlığı: `From` eksik
+
+```rust
+fn alt(s: &str) -> Result<i32, ParseIntError> { s.parse() }
+
+fn ust(s: &str) -> Result<i32, MyError> {
+    let n = alt(s)?;           // kap doğru (ikisi de Result), tipler farklı
+    Ok(n)
+}
+```
+
+```
+error[E0277]: `?` couldn't convert the error to `MyError`
+              the trait `From<ParseIntError>` is not implemented for `MyError`
+```
+
+Mesaj çözümü de söylüyor: `From` yok. Yazdığınız anda hata kayboluyor — çünkü `?`
+açılımında zaten `From::from(e)` çağrısı var, siz tanımlamamıştınız.
+
+### Özet
+
+| Mesajda geçen | Sorun | Çözüm |
+|---|---|---|
+| "can only be used on `Result`s, not `Option`s" | kap farklı | `.ok_or(hata)?` |
+| "couldn't convert the error" | hata tipi farklı | `impl From<...>` |
+
 ## `?` `Option` üzerinde de çalışır
 
 `None` ise erken döner:
 
 ```rust
-fn kullanici_adi(eposta: &str) -> Option<&str> {
+fn username(eposta: &str) -> Option<&str> {
     let at = eposta.find('@')?;
     eposta.get(0..at)
 }

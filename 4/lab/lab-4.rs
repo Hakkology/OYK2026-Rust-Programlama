@@ -3,6 +3,9 @@
 //
 // Her gorevde TODO'lari doldurun; ustundeki ORNEK nasil calistigini gosteriyor.
 
+// Iskelet kod: TODO'lar doldurulana kadar kullanilmayan degisken/import uyarilari normal.
+#![allow(unused)]
+
 fn main() {
     lab_1_option();
     lab_2_geometri();

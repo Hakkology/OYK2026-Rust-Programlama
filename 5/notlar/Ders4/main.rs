@@ -3,7 +3,7 @@
 // testler icin:  rustc --test main.rs -o test4 && ./test4
 
 // --- 1) en basit makro: desen -> uretilecek kod ---
-macro_rules! selam {
+macro_rules! hello {
     () => {
         println!("merhaba");
     };
@@ -14,21 +14,21 @@ macro_rules! selam {
 }
 
 // --- 2) yakalama tipleri: ty ve ident ---
-macro_rules! tip_takma_ad {
+macro_rules! type_alias {
     ($t:ty => $ad:ident) => {
         type $ad = $t;
     };
 }
-tip_takma_ad!(u32 => Sayac);
+type_alias!(u32 => Counter);
 
 // --- 3) HIJYEN: makro icindeki isim disariyi kirletmez ---
-macro_rules! artir {
+macro_rules! increment {
     ($x:ident) => {
         $x += 1;                 // ismi DISARIDAN aldik, o yuzden calisir
     };
 }
 
-macro_rules! kirletmez {
+macro_rules! no_pollution {
     () => {
         let x = 9999;            // bu x, disaridaki x DEGILDIR
         let _ = x;
@@ -65,41 +65,41 @@ macro_rules! avec {
 }
 
 // --- 6) tekrar eden impl'leri makroyla uretmek ---
-trait EnBuyuk {
-    fn en_buyuk() -> Self;
+trait MaxValue {
+    fn max_value() -> Self;
 }
 
-macro_rules! max_uygula {
+macro_rules! impl_max {
     ( $( $t:ty ),+ $(,)? ) => {
         $(
-            impl EnBuyuk for $t {
-                fn en_buyuk() -> Self { <$t>::MAX }
+            impl MaxValue for $t {
+                fn max_value() -> Self { <$t>::MAX }
             }
         )+
     };
 }
-max_uygula!(u8, u16, u32, i8, i16, i32);
+impl_max!(u8, u16, u32, i8, i16, i32);
 
 // --- 7) stringify!: ismi METIN olarak kullanmak ---
-macro_rules! yazdir_ve_hesapla {
+macro_rules! print_and_eval {
     ($ifade:expr) => {
         println!("{:>18} = {}", stringify!($ifade), $ifade);
     };
 }
 
 fn main() {
-    selam!();
-    selam!("Mars");
-    selam!["kose parantez de olur"];      // ( ) [ ] { } ucu de aynidir
+    hello!();
+    hello!("Mars");
+    hello!["kose parantez de olur"];      // ( ) [ ] { } ucu de aynidir
 
-    let sayac: Sayac = 42;                // makronun urettigi tip takma adi
-    println!("Sayac = {}", sayac);
+    let sayac: Counter = 42;                // makronun urettigi tip takma adi
+    println!("Counter = {}", sayac);
 
     // hijyen
     let mut x = 42;
-    artir!(x);
+    increment!(x);
     assert_eq!(x, 43);
-    kirletmez!();
+    no_pollution!();
     println!("hijyen: disaridaki x = {} (makro icindeki 9999 degil)", x);
 
     // parantez tuzagi: ayni ifade, iki farkli yakalama
@@ -114,12 +114,12 @@ fn main() {
     println!("{:?} {:?} {:?} {:?}", bos, sayilar, sondaki_virgul, tekrarli);
 
     // makroyla uretilen impl'ler
-    println!("u8::en_buyuk  = {}", <u8 as EnBuyuk>::en_buyuk());
-    println!("i32::en_buyuk = {}", <i32 as EnBuyuk>::en_buyuk());
+    println!("u8::max_value  = {}", <u8 as MaxValue>::max_value());
+    println!("i32::max_value = {}", <i32 as MaxValue>::max_value());
 
     // stringify
-    yazdir_ve_hesapla!(2 + 3 * 4);
-    yazdir_ve_hesapla!(sayilar.len());
+    print_and_eval!(2 + 3 * 4);
+    print_and_eval!(sayilar.len());
 
     // NE ZAMAN MAKRO: degisken sayida arguman, tekrar eden impl, isimleri metne cevirme.
     // Bunlarin disinda FONKSIYON yazin - makro hata mesajlarini ve IDE destegini bozar.
@@ -131,26 +131,26 @@ mod tests {
     // makrolar metinsel kapsamda oldugu icin use gerekmiyor
 
     #[test]
-    fn bos_vec() {
+    fn empty_vec() {
         let v: Vec<u32> = avec![];
         assert!(v.is_empty());
     }
 
     #[test]
-    fn elemanli_vec() {
+    fn vec_with_elements() {
         let v: Vec<u32> = avec![42, 43];
         assert_eq!(v.len(), 2);
         assert_eq!(v[1], 43);
     }
 
     #[test]
-    fn tekrarli_vec() {
+    fn repeated_vec() {
         let v: Vec<u32> = avec![7; 3];
         assert_eq!(v, vec![7, 7, 7]);
     }
 
     #[test]
-    fn parantez_tuzagi() {
+    fn paren_trap() {
         assert_eq!(kare_expr!(2 + 3), 25);   // expr: ifade butun kalir
         assert_eq!(kare_tt!(2 + 3), 11);     // tt: token kopyalanir, tuzak geri gelir
     }

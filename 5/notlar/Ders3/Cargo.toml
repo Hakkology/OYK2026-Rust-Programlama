@@ -1,0 +1,8 @@
+[package]
+name = "ders3"
+version = "0.1.0"
+edition = "2021"
+
+# Iki ikili var (src/main.rs ve src/bin/report.rs). Duz `cargo run`
+# hangisini calistiracagini bilemez; varsayilani burada soyluyoruz.
+default-run = "ders3"

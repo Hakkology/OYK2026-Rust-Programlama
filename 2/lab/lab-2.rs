@@ -4,6 +4,9 @@
 // Her gorevde yorumlu kod DERLENMIYOR. Yorumu acin, hatayi okuyun,
 // sonra ALTINDAKI fonksiyonu duzeltin. Amac hata mesajini tanimak.
 
+// Iskelet kod: TODO'lar doldurulana kadar kullanilmayan degisken/import uyarilari normal.
+#![allow(unused)]
+
 fn main() {
     dojo_1();
     dojo_2();

@@ -102,8 +102,10 @@ fn main() {
     println!("gecici dusuruldu, main devam ediyor");
 
     // drop METODUNU elle cagiramazsiniz - derleyici kapsam sonunda zaten cagiracak
-    // let x = String::from("a");
-    // x.drop();                        // E0040 explicit use of destructor method
+    // let v = vec![1, 2, 3];
+    // v.drop();                        // E0040 explicit use of destructor method
+    // (String'de ayni satir E0599 verir: String'in KENDI Drop implementasyonu yok,
+    //  o yuzden ortada cagrilacak bir drop metodu bulunmuyor)
 
     // imza bir sozlesmedir, icine bakmadan ne olacagini soyler
     //   fn f(s: String)      -> alir, geri vermez

@@ -49,25 +49,25 @@ Bir `proc-macro` crate'i başka bir şey dışa açamaz — sadece makro barınd
 ```
 proc_ornek/
   Cargo.toml            workspace
-  etiket_derive/        proc-macro = true   -> makronun kendisi
-  kullanan/             makroyu kullanan program
+  label_derive/         proc-macro = true   -> makronun kendisi
+  consumer/             makroyu kullanan program
 ```
 
 ```bash
 cd proc_ornek && cargo run
 ```
 
-`kullanan` tarafında yazılan tek şey şu:
+`consumer` tarafında yazılan tek şey şu:
 
 ```rust
-#[derive(Etiket)]
-struct Rover { ad: String, mesafe_km: f64 }
+#[derive(Label)]
+struct Rover { name: String, distance_km: f64 }
 ```
 
-Karşılığında `Rover::tip_adi()`, `Rover::alan_sayisi()` ve `r.etiket()` metotları
+Karşılığında `Rover::type_name()`, `Rover::field_count()` ve `r.label()` metotları
 oluşuyor — hiçbirini biz yazmadık.
 
-Makronun içi (`etiket_derive/src/lib.rs`) üç adımdan ibaret:
+Makronun içi (`label_derive/src/lib.rs`) üç adımdan ibaret:
 
 1. Gelen token akışını metne çevir
 2. Tip adını ve alan sayısını bul
@@ -87,13 +87,13 @@ Makronun içi (`etiket_derive/src/lib.rs`) üç adımdan ibaret:
 Bu üçlüyle yazıldığında makro şuna benzer:
 
 ```rust
-#[proc_macro_derive(Etiket)]
-pub fn turet(girdi: TokenStream) -> TokenStream {
+#[proc_macro_derive(Label)]
+pub fn derive_label(girdi: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(girdi as DeriveInput);
     let ad = &ast.ident;
     quote! {
         impl #ad {
-            pub fn tip_adi() -> &'static str { stringify!(#ad) }
+            pub fn type_name() -> &'static str { stringify!(#ad) }
         }
     }.into()
 }

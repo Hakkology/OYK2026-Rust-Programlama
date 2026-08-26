@@ -135,8 +135,17 @@ drop(gecici);
 // println!("{}", gecici);   // E0382 — sahipliği drop aldı
 ```
 
-`drop` **metodunu** elle çağıramazsınız (`x.drop()` → `E0040`): kapsam sonunda
-derleyici zaten çağıracak, değer iki kez düşmüş olurdu.
+`drop` **metodunu** elle çağıramazsınız: kapsam sonunda derleyici zaten çağıracak,
+değer iki kez düşmüş olurdu.
+
+```rust
+let v = vec![1, 2, 3];
+v.drop();     // E0040: explicit use of destructor method
+```
+
+Küçük ayrıntı: bu hatayı almak için tipin kendi `Drop` implementasyonu olmalı.
+`Vec` uygular, `String` uygulamaz — `String`'de aynı satır `E0599` (böyle bir metot yok)
+verir. İkisinde de sonuç aynı: elle çağıramıyorsunuz, `drop(x)` fonksiyonunu kullanıyorsunuz.
 
 ## Parametre tipi seçimi
 

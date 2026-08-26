@@ -64,9 +64,9 @@ Bu tablo Gün 3'te öğrendiğiniz ödünç kurallarının aynısı, sadece meto
 | `self` | **tüketir** | taşıma |
 
 ```rust
-fn length(&self) -> f64          // okur, nesne çağıranda kalır
-fn translate(&mut self, dx: f64)      // değiştirir, nesne çağıranda kalır
-fn ada_donustur(self) -> String   // tüketir, nesne bir daha kullanılamaz
+fn length(&self) -> f64             // okur, nesne çağıranda kalır
+fn translate(&mut self, dx: f64)    // değiştirir, nesne çağıranda kalır
+fn into_text(self) -> String        // tüketir, nesne bir daha kullanılamaz
 ```
 
 Her metot yazarken kendinize sorun: bu okuyacak mı, değiştirecek mi, yoksa nesneyi

@@ -58,6 +58,8 @@ fn main() {
     println!("{} {}", ilk, k1.1);       // k1.1 hala erisilebilir
 
     // shadowing move degil, eski deger hemen duser
+    // ilk g hic kullanilmiyor - uyari dogru, gosterdigimiz sey de tam bu
+    #[allow(unused_variables)]
     let g = String::from("eski");
     let g = String::from("yeni");
     println!("{}", g);

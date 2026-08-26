@@ -4,6 +4,9 @@
 // Vec + String + dilim + HashMap + gezinme + odunc tek programda.
 // Her gorevde TODO'lari doldurun; ustundeki ORNEK nasil calistigini gosteriyor.
 
+// Iskelet kod: TODO'lar doldurulana kadar kullanilmayan degisken/import uyarilari normal.
+#![allow(unused)]
+
 use std::collections::HashMap;
 
 const METIN: &str = "Rust ogrenmek zor ama Rust yazmak keyifli
