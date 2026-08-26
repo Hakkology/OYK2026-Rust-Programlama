@@ -135,6 +135,56 @@ implemente etmesi gerekir; ama o trait'e erişemez. Sonuç: yeni hasar tiplerini
 Ne işe yarar: trait'e ileride yeni metot eklerseniz kimsenin kodu kırılmaz, çünkü
 implemente eden herkes sizsiniz. std bunu API'sini kilitlemek için kullanır.
 
+## Object safety (dyn compatibility) — her trait `dyn` olamaz
+
+Ders 2'de `Box<dyn Unit>` yazabildik. Ama her trait bunu kaldırmaz:
+
+```rust
+trait Summon {
+    fn summon() -> Self;             // self almıyor, Self döndürüyor
+}
+
+let s: Box<dyn Summon> = ...;        // E0038
+//  error[E0038]: the trait `Summon` is not dyn compatible
+//  ...because associated function `summon` has no `self` parameter
+```
+
+(Kuralın eski adı *object safety*, derleyicinin bugünkü dilinde *dyn compatibility*.
+İkisini de duyacaksınız, aynı şey.)
+
+Bir trait'in `dyn` olabilmesi için metotlarının **nesne güvenli** olması gerekir:
+
+| Kural | Neden |
+|---|---|
+| generic metot olmayacak — `fn f<T>(&self)` | vtable'da metot başına **tek** adres var; her `T` için ayrı kod ister, hangisinin adresini koyacağız? |
+| `Self` döndürmeyecek — `fn summon() -> Self` | çağıran `Self`'in ne olduğunu bilmiyor; boyutu belirsiz |
+| `self` almayan metot olmayacak | vtable'a bakabilmek için elde bir nesne olmalı |
+| associated const olmayacak — `const MAX: u32;` | vtable bir **fonksiyon** tablosu; sabitin orada yeri yok |
+
+Dördünün de tek bir sebebi var: **vtable sabit boyutlu bir tablodur.** İçine ancak
+derleme zamanında sayısı ve imzası belli olan girdiler konabilir.
+
+Trait tasarımıyla ilgili bir kısıt, bu yüzden burada: trait'i yazarken `dyn` olarak
+kullanılabilmesini isteyip istemediğinize karar veriyorsunuz.
+
+### Kaçış yolu: `where Self: Sized`
+
+Sorunlu metodu vtable'ın dışında bırakabilirsiniz:
+
+```rust
+trait Summonable {
+    fn name(&self) -> &str;                       // vtable'a girer
+
+    fn summon() -> Self where Self: Sized;        // vtable'a GIRMEZ
+}
+```
+
+Artık `Box<dyn Summonable>` derleniyor. Bedeli: `summon()`'ı yalnızca somut tip
+üzerinden çağırabilirsiniz (`Dragon::summon()`), `dyn` üzerinden değil.
+
+Bugünkü `Boss: Unit + Display` nesne güvenlidir — üç trait'in de tüm metotları
+`&self` alıyor ve `Self` döndürmüyor. Yani `Vec<Box<dyn Boss>>` yazılabilir.
+
 ## Toparlarsak
 
 | Araç | Ne için |
@@ -144,3 +194,4 @@ implemente eden herkes sizsiniz. std bunu API'sini kilitlemek için kullanır.
 | newtype | orphan rule'u aşmak **ve** tipleri karıştırmamak |
 | blanket impl | bir koşulu sağlayan tüm tiplere tek satırla davranış vermek |
 | sealed trait | trait'i dışarıya kapatmak, ileride genişletebilmek |
+| object safety | trait'in `dyn` olarak kullanılıp kullanılamayacağını belirleyen kurallar |

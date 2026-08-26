@@ -6,6 +6,7 @@
 // canlari vardir, vurus gucleri vardir, savas narasi atarlar.
 
 use std::fmt::Debug;
+use std::mem::size_of;
 
 // ---------------------------------------------------------------
 // 1) TRAIT = SOZLESME
@@ -152,6 +153,26 @@ fn spawn_starter() -> impl Unit {
     Archer { hp: 80, arrows: 20 }
 }
 
+// DINAMIK dispatch: hangi metodun calisacagi vtable'dan bakilir
+fn dynamic_report(u: &dyn Unit) -> String {
+    u.status()
+}
+
+// STATIK dispatch: her somut tip icin ayri kod uretilir (Ders 1)
+fn static_report<T: Unit>(u: &T) -> String {
+    u.status()
+}
+
+// impl Unit ile YAPAMADIGIMIZ sey: iki farkli tipten birini dondurmek.
+// Box<dyn Unit> hep ayni boyutta - bir pointer.
+fn spawn(boss: bool) -> Box<dyn Unit> {
+    if boss {
+        Box::new(Dragon { hp: 500, rage: 15 })
+    } else {
+        Box::new(Archer { hp: 80, arrows: 20 })
+    }
+}
+
 // AMA tek bir somut tip olmak zorunda:
 // fn spawn(boss: bool) -> impl Unit {
 //     if boss { Dragon { hp: 500, rage: 10 } } else { Goblin { hp: 20 } }
@@ -207,8 +228,44 @@ fn main() {
         + dragon.attack_power() + healer.attack_power();
     println!("  toplam vurus: {}", total);
 
-    // BUGUNUN DUVARI: dort birimi TEK BIR orduya (Vec) koyamiyoruz.
-    // let ordu = vec![okcu, sovalye, ejderha, sifaci];
+    // DUVAR: dort birimi TEK BIR orduya (Vec) koyamiyoruz.
+    // let ordu = vec![archer, knight, dragon, healer];
     //   E0308: mismatched types - Vec tek tip tutar, bunlar dort ayri tip
     // Trait onlari DAVRANISTA birlestirdi, TIPTE birlestirmedi.
+
+    println!("-- duvari yikmak: Box<dyn Unit> --");
+    // Vec yine TEK tip tutuyor; o tip artik Box<dyn Unit>.
+    let army: Vec<Box<dyn Unit>> = vec![
+        Box::new(Archer { hp: 80, arrows: 20 }),
+        Box::new(Knight { hp: 140, armor: 25 }),
+        Box::new(Dragon { hp: 500, rage: 15 }),
+        Box::new(Healer),
+    ];
+    for u in &army {
+        println!("  {}", u.status());
+    }
+    let army_power: i32 = army.iter().map(|u| u.attack_power()).sum();
+    println!("  ordu vurusu: {}", army_power);
+
+    println!("-- &dyn: sahiplik gerekmiyorsa --");
+    let front: Vec<&dyn Unit> = vec![&archer, &dragon];
+    for u in &front {
+        println!("  {}", u.battle_cry());
+    }
+
+    println!("-- ayni satir, iki farkli dispatch --");
+    println!("  statik : {}", static_report(&archer));
+    println!("  dinamik: {}", dynamic_report(&archer));
+
+    println!("-- donuste dyn: if/else artik mumkun --");
+    println!("  {}", spawn(true).name());
+    println!("  {}", spawn(false).name());
+
+    println!("-- fat pointer: dyn iki pointer tasir --");
+    println!("  &Archer        {:>3} bayt", size_of::<&Archer>());
+    println!("  &dyn Unit      {:>3} bayt", size_of::<&dyn Unit>());
+    println!("  Box<Archer>    {:>3} bayt", size_of::<Box<Archer>>());
+    println!("  Box<dyn Unit>  {:>3} bayt", size_of::<Box<dyn Unit>>());
+    // Gun 3'te slice ve &str de fat pointer'di (ptr + uzunluk).
+    // Burada da fat pointer, ama ikinci alan vtable pointeri.
 }

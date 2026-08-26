@@ -132,7 +132,7 @@ fn spawn(boss: bool) -> impl Unit {
 Sebebi teknik: derleyicinin dönüş değerinin **boyutunu** derleme zamanında bilmesi
 gerekir. `Dragon` ile `Goblin` farklı boyutta; "ikisinden biri" diye bir tip yok.
 
-## Bugünün duvarı
+## Duvar — dört birimi tek listeye koyamıyoruz
 
 Dört birimi tek bir orduya koymak isteyin:
 
@@ -145,8 +145,106 @@ Olmuyor. `Vec<T>` tek tip tutar; `Archer` ile `Dragon` ayrı tiplerdir. Trait on
 yapmak isteyeceğiniz ilk şey tam olarak budur: orduyu bir listeye koyup hepsine
 `battle_cry()` dedirtmek.
 
-Bu, generic'lerin sınırıdır ve bilinçli olarak burada bırakılıyor: çözümü ayrı bir
-mekanizma gerektiriyor.
+Bu, generic'lerin sınırıdır. Çözümü ayrı bir mekanizma gerektiriyor: `dyn`.
+
+## Duvarı yıkmak — `dyn Trait`
+
+```rust
+let army: Vec<Box<dyn Unit>> = vec![
+    Box::new(archer),
+    Box::new(knight),
+    Box::new(dragon),
+    Box::new(healer),
+];
+
+for u in &army {
+    println!("{}", u.status());
+}
+```
+
+`Box<dyn Unit>` şu demek: "`Unit`'i implemente eden, ama hangisi olduğunu derleme
+zamanında bilmediğim bir şey." `Vec` yine tek tip tutuyor — o tip artık `Box<dyn Unit>`.
+
+`dyn Unit`'in boyutu derleme zamanında bilinmez (bir `Archer` mı, bir `Dragon` mı?).
+Bu yüzden her zaman bir pointer'ın arkasında durur: `Box<dyn Unit>` ya da `&dyn Unit`.
+Sahiplik gerekmiyorsa referans yeter:
+
+```rust
+let front: Vec<&dyn Unit> = vec![&archer, &dragon];
+```
+
+### Dönüşte if/else artık mümkün
+
+Yukarıda `impl Unit` ile yapamadığımız şey:
+
+```rust
+fn spawn(boss: bool) -> Box<dyn Unit> {
+    if boss { Box::new(Dragon { hp: 500, rage: 15 }) }
+    else    { Box::new(Archer { hp: 80, arrows: 20 }) }
+}
+```
+
+Neden şimdi oluyor: `impl Unit` derleme zamanında **tek bir somut tipe** bağlanmak
+zorundaydı, çünkü dönüş değerinin boyutu gerekiyordu. `Box<dyn Unit>` her zaman aynı
+boyutta — bir pointer. Asıl veri heap'te; `Dragon` ile `Archer`'ın boyut farkı imzayı
+ilgilendirmiyor.
+
+### İki dispatch
+
+```rust
+fn static_report<T: Unit>(u: &T) -> String { u.status() }   // derleme zamanı
+fn dynamic_report(u: &dyn Unit)     -> String { u.status() }  // çalışma zamanı
+```
+
+Kaynak kodda aynı satır, çözülme biçimi farklı:
+
+| | statik (`impl` / generic) | dinamik (`dyn`) |
+|---|---|---|
+| çözülme | derleme zamanı | çalışma zamanı |
+| kod boyutu | her tip için ayrı kopya | tek kopya |
+| çağrı maliyeti | sıfır, inline olabilir | bir pointer atlaması |
+| heterojen liste | ✗ | ✓ |
+| dönüşte if/else | ✗ | ✓ |
+| derleme süresi | uzar | kısalır |
+
+Ders 1'de monomorphization'ın karşıtı diye geçtiğimiz şey tam olarak bu sütun.
+
+### `dyn` neden iki pointer
+
+```rust
+size_of::<&Archer>()        // 8
+size_of::<&dyn Unit>()      // 16
+size_of::<Box<Archer>>()    // 8
+size_of::<Box<dyn Unit>>()  // 16
+```
+
+`dyn` bir **fat pointer**: veri pointeri + vtable pointeri.
+
+```
+Archer için vtable:
+  [ drop | boyut | hizalama | name() | hp() | attack_power() | ... ]
+
+Box<dyn Unit> = (Archer verisine ptr, Archer'ın vtable'ına ptr)
+u.attack_power()  ->  vtable'daki ilgili adresteki fonksiyonu çağır
+```
+
+Sınıf fat pointer'ı ikinci kez görüyor: Gün 3'te slice ve `&str` de fat pointer'dı
+(ptr + uzunluk). Aynı fikir; ikinci alan bu sefer uzunluk değil, vtable.
+
+vtable derleme zamanında üretilir ve ikili dosyanın salt okunur bölümünde durur;
+çalışma zamanında sadece okunur. Her **(tip, trait)** çifti için bir tane vardır —
+`Archer` üç trait implemente ediyorsa üç ayrı vtable oluşur.
+
+Not: vtable pointeri `Archer`'ın **içinde** durmuyor, referansın içinde. C++'ta tersi:
+`virtual` yazdığınız anda o sınıftan her nesne kendi içinde bir vptr taşır, kullansanız
+da kullanmasanız da. Rust'ta `Archer`'ı doğrudan kullanırsanız hiçbir şey taşımaz;
+bedeli yalnızca `dyn` olarak kullandığınız yerde ödersiniz.
+
+### Karar kuralı
+
+Önce statik deneyin. Heterojen koleksiyon ya da çalışma zamanında tip seçimi
+gerekiyorsa dinamiğe geçin. Aradaki fark çoğu uygulamada ölçülemez; asıl kazanç
+`Vec<Box<dyn Unit>>` gibi ifade edemediğiniz yapıları ifade edebilmek.
 
 ## Bound'suz generic
 

@@ -156,10 +156,10 @@ Bedava değil, ama bedeli **derleme zamanında** ödüyorsunuz:
 
 ### Karşıtı
 
-Tek bir kod üretip tipi çalışma zamanında çözmek de mümkün (`dyn Trait`). O zaman ikili
-küçülür ama her çağrıda dolaylı bir atlama maliyeti çıkar. İkisinin karşılaştırması
-ayrı bir konu; bugün bilinmesi gereken şey, Rust'ın **varsayılanının monomorphization**
-olduğu.
+Tek bir kod üretip tipi çalışma zamanında çözmek de mümkün: **dinamik dispatch**
+(`dyn Trait`). O zaman ikili küçülür ama her çağrıda dolaylı bir atlama maliyeti çıkar.
+Ders 2'de trait'i tanımlayınca ikisini yan yana koyacağız. Şimdilik bilinmesi gereken:
+Rust'ın **varsayılanı monomorphization**, yani statik dispatch.
 
 ## Bound'suz generic ne işe yarar
 

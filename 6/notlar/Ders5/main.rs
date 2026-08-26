@@ -55,6 +55,14 @@ impl Weapon for Staff {
 // impl Weapon for Bow { type Ammo = Bullet; ... }
 //   E0119: conflicting implementations of trait `Weapon` for type `Bow`
 
+// Ayni cephaneyi kullanan ikinci bir silah - dyn ornegi icin
+struct Crossbow;
+
+impl Weapon for Crossbow {
+    type Ammo = Arrow;
+    fn reload(&self) -> Arrow { Arrow { count: 10 } }
+}
+
 // Associated type'i bound icinde kullanmak:
 fn show_ammo<W>(w: &W)
 where
@@ -137,6 +145,16 @@ fn main() {
     println!("-- std: Add hem generic hem associated kullanir --");
     println!("  {}", Arrow { count: 30 } + Arrow { count: 12 });
     println!("  {}", Arrow { count: 30 } + 5u32);
+
+    println!("-- associated type ve dyn --");
+    // let w: Box<dyn Weapon> = Box::new(Bow);
+    //   E0191: the value of the associated type `Ammo` must be specified
+    //   dyn derken somut tipi unutuyoruz; Ammo'nun ne oldugu yazilmali.
+    let arsenal: Vec<Box<dyn Weapon<Ammo = Arrow>>> = vec![Box::new(Bow), Box::new(Crossbow)];
+    for w in &arsenal {
+        println!("  ok deposu: {}", w.reload());
+    }
+    // Musket bu listeye giremez: onun Ammo'su Bullet.
 
     println!("-- ozet --");
     println!("  her tip icin cevap TEK ise      -> associated type (type Ammo)");

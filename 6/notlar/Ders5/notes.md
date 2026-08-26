@@ -129,6 +129,31 @@ where
 associated type'lara koşul koymanın yoludur ve iterator adaptörlerinde çok görülür
 (`I::Item: Display` gibi).
 
+## Associated type ve `dyn`
+
+Ders 2'de `Box<dyn Unit>` yazmıştık. `Weapon` ile aynısını denerseniz:
+
+```rust
+let w: Box<dyn Weapon> = Box::new(Bow);
+//  error[E0191]: the value of the associated type `Ammo` must be specified
+```
+
+Sebep basit: `dyn` derken somut tipi unutuyorsunuz. Ama `reload()`'un ne döndürdüğü
+`Ammo`'ya bağlı ve `Ammo` somut tipe göre değişiyor. Derleyici çağıranın elinde ne
+kalacağını bilemez, o yüzden **açık açık yazmanızı** ister:
+
+```rust
+let w: Box<dyn Weapon<Ammo = Arrow>> = Box::new(Bow);
+let arsenal: Vec<Box<dyn Weapon<Ammo = Arrow>>> = vec![Box::new(Bow), Box::new(Crossbow)];
+```
+
+Artık liste heterojen ama **cephanesi ortak**: içindeki her silah `Arrow` döndürür.
+`Musket` bu listeye giremez, çünkü `Ammo = Bullet`.
+
+Buradan çıkan kural: associated type'lı bir trait'i `dyn` yapacaksanız associated
+type'ı sabitlemek zorundasınız. Generic parametreli trait'te (`Craft<T>`) durum aynı —
+`dyn Craft<Sword>` yazarsınız, `T`'yi belirtmeden `dyn` olmaz.
+
 ## Karar tablosu
 
 | Soru | Cevap |

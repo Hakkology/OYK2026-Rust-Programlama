@@ -141,6 +141,44 @@ impl DamageType for Fire {
     fn multiplier(&self) -> f64 { 1.5 }
 }
 
+// ---------------------------------------------------------------
+// 6) OBJECT SAFETY: her trait dyn olamaz
+// ---------------------------------------------------------------
+// Bu trait NESNE GUVENLI DEGIL: self almayan, Self donduren metot var.
+trait Summon {
+    fn summon() -> Self;
+}
+
+impl Summon for Dragon {
+    fn summon() -> Dragon { Dragon { hp: 500, rage: 15 } }
+}
+
+// let s: Box<dyn Summon> = Box::new(Dragon::summon());
+//   E0038: the trait `Summon` cannot be made into an object
+//   Sebep: vtable'da metot basina TEK adres var; `-> Self` ile hangi tipin
+//   hangi boyutta donecegi calisma zamaninda bilinemez.
+
+// Cozum: sorunlu metodu vtable'in DISINDA birak.
+trait Summonable {
+    fn title(&self) -> String;                    // vtable'a girer
+
+    fn summon() -> Self                           // vtable'a GIRMEZ
+    where
+        Self: Sized;
+}
+
+impl Summonable for Dragon {
+    fn title(&self) -> String { format!("{} cagrildi", self.name()) }
+    fn summon() -> Dragon { Dragon { hp: 400, rage: 20 } }
+}
+
+// Boss nesne guvenli: tum metotlar &self aliyor, Self dondurmuyor.
+fn parade(bosses: &[Box<dyn Boss>]) {
+    for b in bosses {
+        println!("  {}", b.intro());
+    }
+}
+
 fn main() {
     let dragon = Dragon { hp: 500, rage: 15 };
     let wounded = Dragon { hp: 120, rage: 40 };
@@ -162,6 +200,21 @@ fn main() {
     println!("  {}", "goblin".taunt());
     println!("  {}", dragon.taunt());
     println!("  {}", party.taunt());
+
+    println!("-- object safety --");
+    // Summonable dyn olabiliyor, cunku summon() where Self: Sized ile isaretli
+    // iki trait de `summon` tanimliyor -> Dragon::summon() belirsiz kalir (E0034),
+    // tam nitelikli cagri sart:
+    let summoned: Box<dyn Summonable> = Box::new(<Dragon as Summonable>::summon());
+    println!("  {}", summoned.title());
+    // summoned.summon();  -> vtable'da yok, dyn uzerinden cagrilamaz
+    println!("  somut tip uzerinden: {}", <Dragon as Summon>::summon().name());
+
+    let bosses: Vec<Box<dyn Boss>> = vec![
+        Box::new(Dragon { hp: 500, rage: 15 }),
+        Box::new(Dragon { hp: 120, rage: 40 }),
+    ];
+    parade(&bosses);
 
     println!("-- sealed trait --");
     println!("  ates hasari carpani: {}", Fire.multiplier());
