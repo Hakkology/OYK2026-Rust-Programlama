@@ -14,17 +14,19 @@ normal Rust olarak derlenir. Sonunda `!` gören her şey makrodur.
 Gün 1'deki `rustc` boru hattını hatırlayın; makro açılımı orada belli bir yerde durur:
 
 ```
-kaynak kod (.rs)
+Kaynak Kod (.rs)
   │
-  ├── Lexer + Parser ──────► AST        söz dizimi ağacı
+  ├── Lexer + Parser ──────► İlk AST
+  │                            │
+  │                     [Makro Genişlemesi] ◄── Hem declarative hem proc macrolar burada açılır
+  │                            │
+  ├── AST Doğrulama ───────► Nihai AST
   │
-  ├── Ad çözümleme ────────► HIR        ◄── MAKROLAR BURADA AÇILIR
+  ├── AST -> HIR Çevrimi ──► HIR (Ad çözümleme ve Desugaring tamamlanır)
   │
-  ├── Tip denetimi ────────► MIR        borrow check
+  ├── Tip Denetimi ────────► MIR (Borrow Checker & Optimizasyonlar)
   │
-  ├── Çeviri ──────────────► LLVM IR
-  │
-  └── Kod üretimi ─────────► makine kodu
+  └── LLVM Backend ────────► LLVM IR ──► Makine Kodu
 ```
 
 Buradan çıkan üç sonuç var ve üçü de makroların davranışını açıklar:

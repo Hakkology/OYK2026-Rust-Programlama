@@ -67,7 +67,13 @@ fn main() {
     loop {
         game.draw();
         input.clear();
-        io::stdin().read_line(&mut input).unwrap();
+        // read_line, girdi bitince (Ctrl-D ya da boru) Ok(0) doner.
+        // Bu kontrol olmazsa dongu bos komutla sonsuza kadar doner.
+        let okunan = io::stdin().read_line(&mut input).expect("stdin okunamadi");
+        if okunan == 0 {
+            println!("\n(girdi bitti)");
+            break;
+        }
         let cmd = input.trim().to_lowercase();
 
         match cmd.as_str() {
