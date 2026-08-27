@@ -150,7 +150,11 @@ fn main() {
     // let w: Box<dyn Weapon> = Box::new(Bow);
     //   E0191: the value of the associated type `Ammo` must be specified
     //   dyn derken somut tipi unutuyoruz; Ammo'nun ne oldugu yazilmali.
-    let arsenal: Vec<Box<dyn Weapon<Ammo = Arrow>>> = vec![Box::new(Bow), Box::new(Crossbow)];
+    let arsenal: Vec<Box<dyn Weapon<Ammo = Arrow>>> = vec![
+        Box::new(Bow), 
+        Box::new(Crossbow)
+    ];
+    
     for w in &arsenal {
         println!("  ok deposu: {}", w.reload());
     }
