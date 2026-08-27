@@ -7,6 +7,7 @@
 
 use std::fmt::Debug;
 use std::mem::size_of;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // ---------------------------------------------------------------
 // 1) TRAIT = SOZLESME
@@ -112,15 +113,46 @@ fn announce_c(u: &impl Unit) -> String {
 }
 
 // ---------------------------------------------------------------
+// ZAR: std'de hazir rastgele sayi yok. Gercek projede `rand` crate'i kullanilir;
+// biz crate indirmemek icin bildigimiz seylerle minik bir uretici yaziyoruz:
+// tohumu saatten al, sonra xorshift ile ilerlet.
+// ---------------------------------------------------------------
+struct Dice {
+    seed: u64,
+}
+
+impl Dice {
+    fn new() -> Dice {
+        let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        Dice { seed: nanos | 1 }              // tohum asla 0 olmamali
+    }
+
+    fn d6(&mut self) -> i32 {
+        self.seed ^= self.seed << 13;
+        self.seed ^= self.seed >> 7;
+        self.seed ^= self.seed << 17;
+        (self.seed % 6) as i32 + 1            // 1..=6
+    }
+}
+
+// ---------------------------------------------------------------
 // 3) FARK NEREDE ORTAYA CIKIYOR: iki parametre
 // ---------------------------------------------------------------
 // T tek bir tip: iki arguman AYNI tip olmak zorunda (ayni sinif dusellosu)
 fn duel<T: Unit>(a: &T, b: &T) -> String {
-    if a.attack_power() >= b.attack_power() {
-        format!("{} kazandi", a.name())
+    let mut dice = Dice::new();
+    let roll_a = dice.d6();
+    let roll_b = dice.d6();
+    let score_a = a.attack_power() + roll_a;
+    let score_b = b.attack_power() + roll_b;
+
+    // beraberlikte saldiran (a) kazanir
+    let (winner, wp, wr, lp, lr) = if score_a >= score_b {
+        (a.name(), a.attack_power(), roll_a, b.attack_power(), roll_b)
     } else {
-        format!("{} kazandi", b.name())
-    }
+        (b.name(), b.attack_power(), roll_b, a.attack_power(), roll_a)
+    };
+    format!("{} kazandi ({}+{} zar vs {}+{} zar)", winner, wp, wr, lp, lr)
 }
 
 // impl Trait: iki arguman FARKLI tip olabilir (karma savas)

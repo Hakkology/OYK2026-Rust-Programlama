@@ -5,6 +5,7 @@
 // Dunya: karakter istatistikleri - can, mana, seviye.
 
 use std::convert::TryFrom;
+use std::error::Error;
 use std::fmt;
 use std::ops::{Add, Mul, Sub};
 
@@ -70,6 +71,16 @@ impl From<Level> for Mana {
 #[derive(Debug, PartialEq)]
 struct NegativeHp(i32);
 
+// Hata tipi de bir NEWTYPE: hangi degerin reddedildigini yaninda tasiyor.
+// Gun 5'te ogrendigimiz sozlesmeyi tamamliyoruz: Display + Error.
+impl fmt::Display for NegativeHp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "negatif can olmaz: {}", self.0)
+    }
+}
+
+impl Error for NegativeHp {}
+
 impl TryFrom<i32> for Hp {
     type Error = NegativeHp;
 
@@ -119,6 +130,12 @@ fn print_hp<T: Into<Hp>>(x: T) {
     println!("  {}", hp);
 }
 
+// Error yazdigimiz icin ? bu hatayi Box<dyn Error>'a cevirebiliyor (Gun 5).
+fn load_hp(raw: i32) -> Result<Hp, Box<dyn Error>> {
+    let hp = Hp::try_from(raw)?;
+    Ok(hp)
+}
+
 fn main() {
     let dragon_hp = Hp(500);
     let archer_hp = Hp(80);
@@ -142,6 +159,12 @@ fn main() {
     let base_mana: Mana = level.into();      // Into BEDAVA geldi
     println!("  {} -> {} + {}", level, base_hp, base_mana);
 
+    // Seviye atlayinca can/mana KENDILIGINDEN degismez, yeniden turetilir.
+    let level = level + 1;
+    let base_hp: Hp = level.into();
+    let base_mana: Mana = level.into();
+    println!("  seviye atladi: {} -> {} + {}", level, base_hp, base_mana);
+
     println!("-- impl Into<T> parametresi --");
     print_hp(Level(3));                            // Level verdik
     print_hp(Hp(120));                             // Hp de verebiliriz
@@ -152,6 +175,14 @@ fn main() {
     match Hp::try_from(-30) {
         Ok(h) => println!("  gecerli: {}", h),
         Err(NegativeHp(v)) => println!("  gecersiz: {} - negatif can olmaz", v),
+    }
+    // Display yazdik: {} ile kullaniciya gosterilebiliyor
+    println!("  Display : {}", NegativeHp(-30));
+    // Error yazdik: ? artik bu hatayi Box<dyn Error>'a cevirebiliyor
+    println!("  ? ile   : {:?}", load_hp(250).map(|h| h.to_string()));
+    match load_hp(-30) {
+        Ok(_) => {}
+        Err(e) => println!("  ? ile   : hata -> {}", e),
     }
 
     println!("-- Ord: Level siralanabiliyor, CritMultiplier siralanamiyor --");

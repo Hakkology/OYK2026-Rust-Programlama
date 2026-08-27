@@ -60,11 +60,29 @@ let hp = Hp::from(level);         // From
 let mana: Mana = level.into();    // Into — yazmadınız, geldi
 ```
 
+`into()` "bu değeri şu tipe çevir" demektir; hangi tipe çevireceğini **hedefin tipinden**
+anlar (`let mana: Mana = ...`). Bir şeyi güncellemez, yeni bir değer üretir. Seviye
+atlayınca can ve manayı kendiniz yeniden türetirsiniz:
+
+```rust
+let level = level + 1;             // Level(8) - sadece seviye degisti
+let hp: Hp = level.into();         // 160 can
+let mana: Mana = level.into();     // 80 mana
+```
+
 Sebebi yine std'deki bir blanket impl:
 
 ```rust
-impl<T, U: From<T>> Into<U> for T
+impl<T, U> Into<U> for T
+where
+    U: From<T>,
+{
+    fn into(self) -> U { U::from(self) }     // govdesi bu kadar
+}
 ```
+
+Yani `into()` ayrı bir mekanizma değil: `level.into()` derlendiğinde `Hp::from(level)`
+çağrısına dönüşüyor. Aynı fonksiyon, metot söz dizimiyle yazılmış hâli.
 
 **Kural: `From` yazın, `Into`'yu asla elle yazmayın.**
 
@@ -101,6 +119,40 @@ Hp::try_from(-30)  ->  Err(NegativeHp(-30))
 ```
 
 Negatif can diye bir şey yoktur; tip sistemi bunu tutuyor.
+
+### Hata neden `String` değil de kendi tipi
+
+`type Error = String` yazabilirdik. Yazmadık, çünkü `NegativeHp` bir newtype: **reddedilen
+değeri yanında taşıyor** ve çağıran onu kalıpla ayıklayabiliyor:
+
+```rust
+match Hp::try_from(-30) {
+    Ok(h) => println!("gecerli: {}", h),
+    Err(NegativeHp(v)) => println!("gecersiz: {}", v),
+}
+```
+
+`String` olsaydı hata metnini ayrıştırmak zorunda kalırdınız. std de aynısını yapar:
+`u8::try_from(300)` size metin değil, `TryFromIntError` döndürür.
+
+Bir hata tipi yazınca sözleşmenin tamamını veriyoruz — Gün 5'ten tanıdık:
+
+```rust
+impl fmt::Display for NegativeHp { ... }   // kullanıcıya gösterilen hâli
+impl Error for NegativeHp {}               // "bu bir hatadır"
+```
+
+`Error`'ı yazmazsanız `?` bu hatayı `Box<dyn Error>`'a çeviremez:
+
+```
+error[E0277]: `?` couldn't convert the error: `NegativeHp: std::error::Error` is not satisfied
+```
+
+Yazınca çalışıyor:
+
+```
+? ile   : hata -> negatif can olmaz: -30
+```
 
 ## Operatörler birer trait'tir
 

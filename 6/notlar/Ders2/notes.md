@@ -100,6 +100,18 @@ skirmish(&archer, &dragon)   // çalışır
 `T` bir **tek** tipe bağlanır; `impl Trait` her parametre için ayrı bir tip demektir.
 Seçim ölçütü budur, estetik değil.
 
+`duel` içinde iki tarafa da 1d6 atıyoruz — aynı sınıfın iki üyesi eşit vuruşa sahip
+olduğu için sonucu zar belirliyor:
+
+```
+Archer kazandi (12+5 zar vs 12+3 zar)
+```
+
+Rust'ın std'sinde hazır rastgele sayı üreteci **yoktur**; gerçek projede `rand` crate'i
+kullanılır. Burada dışarıdan bir şey indirmemek için saatten tohum alıp *xorshift* ile
+ilerleten küçük bir `Dice` yazdık — bildiğimiz şeyler: struct, `&mut self` metodu, bit
+işlemleri. Her çalıştırmada sonuç değişir.
+
 ## Çoklu bound
 
 ```rust
