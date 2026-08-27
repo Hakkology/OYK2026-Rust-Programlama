@@ -1,0 +1,163 @@
+# Gün 7 · Ders 3 — Struct'larda Lifetime, `'static`, Çoklu Ömür
+
+Tanık ifadesinin tam metni bir yerde duruyor. Ayrıştırıcı onu **kopyalamadan** dilimliyor
+— ama o zaman metinden uzun yaşayamaz. Bugünün konusu bu takas.
+
+## Referans tutan struct
+
+```rust
+struct Transcript { source: &str }
+```
+
+```
+error[E0106]: missing lifetime specifier
+```
+
+Derleyicinin sorusu yine aynı: "bu referans ne kadar yaşıyor?" Struct'ın cevabı olmalı:
+
+```rust
+struct Transcript<'a> {
+    source: &'a str,
+}
+```
+
+Anlamı: **`Transcript`, içinde tuttuğu referanstan uzun yaşayamaz.** `'a` artık tipin
+parçasıdır — `Transcript<'a>` diye okunur, `Vec<T>`'deki `T` gibi.
+
+Bu yüzden `impl` bloğu da ömrü ilan etmek zorundadır:
+
+```rust
+impl<'a> Transcript<'a> {
+    fn new(source: &'a str) -> Transcript<'a> { ... }
+}
+```
+
+### Kazanç ölçülebilir
+
+```
+kaynak 75 bayt, struct 16 bayt (sadece pointer + uzunluk)
+OwnedTranscript 24 bayt (String: ptr + len + cap)
+```
+
+`Transcript` metni kopyalamıyor: içinde sadece bir `&str` var (ptr + uzunluk = 16 bayt).
+75 baytlık metin tek bir yerde duruyor. Büyük dosyalarda bu ciddi kazanç.
+
+## Metotlarda elision — 3. kural
+
+```rust
+fn first_line(&self) -> &str
+```
+
+`&self` var, o yüzden çıkışa `self`'in ömrü atanıyor. Yazmasak da `-> &'a str` demek.
+Ders 2'deki üçüncü kural tam olarak buydu.
+
+## İki ömürlü metot
+
+Bazen bir metotta iki farklı ömür olur:
+
+```rust
+fn replace_source<'b>(&'b mut self, new_source: &'a str) -> &'b str {
+    let previous = self.source;
+    self.source = new_source;
+    previous
+}
+```
+
+- `'a` — **metnin** ömrü, struct'ın tipinden geliyor
+- `'b` — bu **ödünç almanın** ömrü, sadece bu çağrı boyunca
+
+Yeni kaynak `'a` kadar yaşamak zorunda (struct onu saklayacak); dönen referans ise
+yalnızca ödünç süresince geçerli.
+
+```
+eski kaynagin ilk satiri: tanik A: araba maviydi
+yeni ilk satir          : tanik A duzeltme: araba lacivertti
+```
+
+## Karar: referans mı tut, sahiplen mi?
+
+| | referans tut (`&'a str`) | sahiplen (`String`) |
+|---|---|---|
+| kopya | yok | var |
+| hız | yüksek | tahsis maliyeti |
+| ömür | kısıtlı — kaynağa bağlı | bağımsız |
+| imza | `'a` taşır, yayılır | temiz |
+
+**Pratik kural:** kütüphane API'sinde sahiplen, iç hesaplamada referans tut.
+
+Sınır şurada net görünüyor — fonksiyon içinde `String` üretip ondan referans tutan bir
+struct **döndüremezsiniz**:
+
+```rust
+fn build_broken() -> Transcript<'static> {
+    let text = String::from("ifade metni");
+    Transcript { source: &text }
+}
+```
+
+```
+error[E0515]: cannot return value referencing local variable `text`
+```
+
+Gün 2'deki sarkan referansın ta kendisi. Çözüm: sahiplenen sürümü döndürün.
+
+## `'static`'in iki anlamı
+
+Sınıfın en çok karıştırdığı yer burası.
+
+| | ne demek |
+|---|---|
+| `&'static T` | bu **referans** program boyu geçerli |
+| `T: 'static` | bu **tip** ödünç referans içermiyor |
+
+```rust
+static AGENCY: &str = "Gece Vardiyasi Burosu";   // (a) ikilinin içinde duruyor
+
+fn archive<T: 'static>(item: T) -> T { item }    // (b) bound
+```
+
+İkincisi çok daha yaygın ve **çok daha zayıf** bir şart:
+
+```rust
+archive(String::from("dosya arsive kaldirildi"));   // çalışır
+```
+
+`String` `'static`'tir — içinde başkasına ait referans yok. Program boyu yaşaması
+gerekmiyor, sadece **kimseden ödünç almamış** olması yeterli.
+
+```rust
+let local = String::from("gecici");
+archive(&local);
+```
+
+```
+error[E0597]: `local` does not live long enough
+```
+
+`&local`'ın tipi `&'x String` ve `'x` program boyu değil — bu yüzden `T: 'static`
+sağlanmıyor.
+
+> Kısaca: `'static` **"sonsuza kadar yaşar"** demek değildir. Bound olarak
+> **"ödünç içermiyor"** demektir.
+
+## Çoklu ömür parametresi
+
+İki girdi farklı ömürlere sahip olabilir; dönen yalnızca birine bağlıysa bunu yazarsınız:
+
+```rust
+fn cross_check<'a, 'b>(primary: &'a str, secondary: &'b str) -> (&'a str, bool) {
+    let confirmed = secondary.contains(primary);
+    (primary, confirmed)
+}
+```
+
+`secondary` kısa yaşayan bir değer olabilir; dönen dilim `primary`'ye bağlı olduğu için
+sorun çıkmaz:
+
+```
+'araba maviydi' dogrulandi mi: true
+'araba maviydi' dogrulandi mi: false
+```
+
+Aslında elision bu imzayı zaten böyle çıkarırdı (1. kural: her referans kendi ömrünü
+alır). Açık yazmamızın tek sebebi ikisinin **ayrı** ömürler olduğunun görülmesi.
