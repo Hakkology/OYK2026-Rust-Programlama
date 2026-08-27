@@ -112,13 +112,13 @@ fn lab_1_akilli_isaretciler() {
 // LAB 2 - Lifetime: neden var
 // ===========================================================================
 // TODO 2a: su fonksiyonu yazmayi deneyin, hata kodunu okuyun:
-//            fn son_ifade() -> &str {
+//            fn latest_statement() -> &str {
 //                let s = String::from("kamyonun plakasi 34 ile basliyordu");
 //                &s
 //            }
 //          Neden 'a eklemek COZUM DEGIL? Dogru cozumu yazin.
 
-// TODO 2b: `fn uzun_olan(a: &str, b: &str) -> &str` yazin - derlenmeyecek.
+// TODO 2b: `fn longer_one(a: &str, b: &str) -> &str` yazin - derlenmeyecek.
 //          Hata kodunu not edin, sonra 'a ekleyerek derletin.
 
 // TODO 2c: 2b'deki fonksiyonu su sekilde cagirin:
@@ -127,13 +127,13 @@ fn lab_1_akilli_isaretciler() {
 //            Sonucu blok DISINDA yazdirin -> hata
 //          Hangi hatayi aldiniz? 'a hangi omre esitlendi?
 
-// TODO 2d: `fn tercihli<'a>(birincil: &'a str, _yedek: &str) -> &'a str` yazin.
-//          _yedek neden 'a almadi? Imza okuyana ne soyluyor?
+// TODO 2d: `fn preferred<'a>(primary: &'a str, _fallback: &str) -> &'a str` yazin.
+//          _fallback neden 'a almadi? Imza okuyana ne soyluyor?
 
-// TODO 2e: `fn ilk_kelime(s: &str) -> &str` yazin - 'a YAZMADAN derlenecek.
+// TODO 2e: `fn first_word(s: &str) -> &str` yazin - 'a YAZMADAN derlenecek.
 //          Elision'in hangi kurali devrede? 2b neden ayni kuraldan yararlanamiyor?
 
-// TODO 2f (NLL): bir Vec'ten `let ilk = &v[0];` alin, yazdirin, sonra v.push(...) yapin.
+// TODO 2f (NLL): bir Vec'ten `let first = &v[0];` alin, yazdirin, sonra v.push(...) yapin.
 //          Calisiyor. Simdi push'tan SONRA ilk'i tekrar yazdirin. Hata kodu ne?
 
 fn lab_2_lifetime() {
@@ -166,13 +166,13 @@ struct Statement<'a> {
 //          Hangisini kutuphane API'sinde dondururdunuz? Neden?
 
 // TODO 3e: su fonksiyonu yazmayi deneyin:
-//            fn uret() -> Statement<'static> {
-//                let metin = String::from("ifade");
-//                Statement { source: &metin }
+//            fn build() -> Statement<'static> {
+//                let text = String::from("ifade");
+//                Statement { source: &text }
 //            }
 //          Hata kodu ne? Bu Gun 2'deki hangi soruna denk geliyor?
 
-// TODO 3f: `fn arsivle<T: 'static>(x: T) -> T` yazin.
+// TODO 3f: `fn archive<T: 'static>(x: T) -> T` yazin.
 //          String::from("...") ile cagirin -> calisir.
 //          Yerel bir String'in referansiyla cagirin -> hata.
 //          T: 'static "sonsuza kadar yasar" mi demek? Bir cumleyle yazin.
@@ -195,14 +195,14 @@ struct Tip {
     source: String,      // muhbir
 }
 
-// TODO 4a: bir `esik` degiskeni tanimlayip onu YAKALAYAN bir closure yazin:
-//            let guclu = |t: &Tip| t.weight >= esik;
+// TODO 4a: bir `threshold` degiskeni tanimlayip onu YAKALAYAN bir closure yazin:
+//            let strong = |t: &Tip| t.weight >= threshold;
 //          Ayni seyi `fn` ile yazmayi deneyin. Hata kodu ne? Neden?
 
-// TODO 4b: `fn suz<F>(ipuclari: &[Tip], kural: F) -> Vec<String> where F: Fn(&Tip) -> bool`
+// TODO 4b: `fn filter_tips<F>(tips: &[Tip], rule: F) -> Vec<String> where F: Fn(&Tip) -> bool`
 //          yazin. Neden generic? Iki closure ayni tip midir?
 
-// TODO 4c: FnMut ornegi: `fn denetle<F>(ipuclari: &[Tip], mut kaydet: F) where F: FnMut(&Tip)`
+// TODO 4c: FnMut ornegi: `fn audit<F>(tips: &[Tip], mut record: F) where F: FnMut(&Tip)`
 //          yazin. Disarida bir sayac ve toplam tutup closure icinde artirin.
 
 // TODO 4d: FnOnce ornegi: bir String'i `move` ile yakalayan ve onu TUKETEN
@@ -215,39 +215,39 @@ struct Tip {
 //            hicbir sey yakalamayan / bir u8 yakalayan / bir String yakalayan
 //          Sonuclari closure'in "adsiz struct" olmasiyla aciklayin.
 
-// TODO 4g: `fn say(ipuclari: &[Tip], kural: fn(&Tip) -> bool) -> usize` yazin.
+// TODO 4g: `fn count_matching(tips: &[Tip], rule: fn(&Tip) -> bool) -> usize` yazin.
 //          Gercek bir fonksiyon geciriliyor mu? Yakalamayan closure?
 //          Yakalayan closure? Sonuncusunun hata kodunu not edin.
 
 fn lab_4_closure() {
     println!("-- lab 4: closure --");
-    let ipuclari = vec![
+    let tips = vec![
         Tip { text: String::from("kamyon plakasi"), weight: 9, source: String::from("trafik") },
         Tip { text: String::from("isimsiz ihbar"), weight: 3, source: String::from("bilinmiyor") },
         Tip { text: String::from("liman kamerasi"), weight: 8, source: String::from("guvenlik") },
         Tip { text: String::from("kahvehane dedikodusu"), weight: 2, source: String::from("bilinmiyor") },
     ];
-    println!("  {} ipucu var", ipuclari.len());
+    println!("  {} ipucu var", tips.len());
     // TODO: 4a-4g
 }
 
 // ===========================================================================
 // LAB 5 - Closure'larla calismak
 // ===========================================================================
-// TODO 5a: `fn agirlik_kurali(esik: u8) -> impl Fn(&Tip) -> bool` yazin.
+// TODO 5a: `fn weight_rule(threshold: u8) -> impl Fn(&Tip) -> bool` yazin.
 //          `move` neden zorunlu?
 
-// TODO 5b: `fn kural_sec(mod_adi: &str) -> Box<dyn Fn(&Tip) -> bool>` yazin:
-//          "siki" -> weight >= 8, "gevsek" -> weight >= 3, digeri -> hepsi.
-//          Ayni seyi -> impl Fn ile YAZMAYI deneyin (closure'lar esik yakalasin).
+// TODO 5b: `fn pick_rule(mode: &str) -> Box<dyn Fn(&Tip) -> bool>` yazin:
+//          "strict" -> weight >= 8, "loose" -> weight >= 3, digeri -> hepsi.
+//          Ayni seyi -> impl Fn ile YAZMAYI deneyin (closure'lar threshold yakalasin).
 //          Hata kodu ne? Gun 6'da hangi duvara benziyor?
 
 // TODO 5c: closure'i struct icinde saklayin:
-//            struct Filtre<F: Fn(&Tip) -> bool> { ad: String, kural: F }
-//          `(self.kural)(t)` yazilisina dikkat - parantezsiz neden olmuyor?
+//            struct Screen<F: Fn(&Tip) -> bool> { name: String, rule: F }
+//          `(self.rule)(t)` yazilisina dikkat - parantezsiz neden olmuyor?
 
 // TODO 5d: farkli kurallari TEK listede tutun:
-//            struct KuralDefteri { kurallar: Vec<(String, Box<dyn Fn(&Tip) -> bool>)> }
+//            struct RuleBook { rules: Vec<(String, Box<dyn Fn(&Tip) -> bool>)> }
 //          En az iki kural ekleyip HEPSINDEN gecen ipuclarini bulun (`all`).
 
 // TODO 5e: kombinatorlerle su dort sonucu uretin:
