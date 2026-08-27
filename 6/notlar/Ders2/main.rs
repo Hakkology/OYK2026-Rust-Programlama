@@ -200,7 +200,7 @@ fn main() {
 
     println!("-- trait'e ait olmayan, tipin kendi metodu --");
     println!("  {}", archer.quiver());
-    // sovalye.quiver();  -> E0599: Knight'ta boyle bir metot yok
+    // knight.quiver();  -> E0599: Knight'ta boyle bir metot yok
 
     println!("-- uc bound yazimi, ayni sonuc --");
     println!("  {}", announce_a(&archer));
@@ -211,12 +211,12 @@ fn main() {
     let archer2 = Archer { hp: 75, arrows: 12 };
     println!("  ayni sinif : {}", duel(&archer, &archer2));
     println!("  karma      : {}", skirmish(&archer, &dragon));
-    // duel(&okcu, &ejderha);
+    // duel(&archer, &dragon);
     //   E0308: mismatched types - T zaten Archer'a baglandi, ikincisi Dragon
 
     println!("-- coklu bound: Unit + Debug --");
     debug_spawn(&goblin);
-    // debug_spawn(&okcu);
+    // debug_spawn(&archer);
     //   E0277: `Archer` doesn't implement `Debug` - derive eklemediniz
 
     println!("-- donuste impl Trait --");
@@ -229,7 +229,7 @@ fn main() {
     println!("  toplam vurus: {}", total);
 
     // DUVAR: dort birimi TEK BIR orduya (Vec) koyamiyoruz.
-    // let ordu = vec![archer, knight, dragon, healer];
+    // let army = vec![archer, knight, dragon, healer];
     //   E0308: mismatched types - Vec tek tip tutar, bunlar dort ayri tip
     // Trait onlari DAVRANISTA birlestirdi, TIPTE birlestirmedi.
 

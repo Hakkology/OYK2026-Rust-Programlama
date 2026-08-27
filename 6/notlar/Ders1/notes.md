@@ -45,10 +45,10 @@ imzaya bakan kişi fonksiyonun ne yapabileceğini görür.
 Envanter yuvası: içine ne koyduğunuz sizin seçiminiz.
 
 ```rust
-struct Slot<T> { label: &'static str, item: T }
+struct Slot<T> { label: String, item: T }
 ```
 
-`Slot<Potion>`, `Slot<Sword>`, `Slot<&str>` — hepsi ayrı tip.
+`Slot<Potion>`, `Slot<Sword>`, `Slot<i32>` — hepsi ayrı tip.
 
 ### `impl<T>` ile `impl Slot<Potion>` farkı
 
@@ -62,9 +62,9 @@ impl<T: Debug> Slot<T>   { fn inspect(&self)   }   // sadece Debug olan T'ler i�
 Sonuç:
 
 ```rust
-iksir.drink()    // çalışır
-kilic.swing()    // çalışır
-kilic.drink()    // E0599: no method named `drink` found for struct `Slot<Sword>`
+potion_slot.drink()   // çalışır
+sword_slot.swing()    // çalışır
+sword_slot.drink()    // E0599: no method named `drink` found for struct `Slot<Sword>`
 ```
 
 Kılıcı içemezsiniz — ve bunu **derleyici** engelliyor, çalışma zamanında bir kontrol değil.

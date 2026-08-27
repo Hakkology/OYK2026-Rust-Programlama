@@ -163,7 +163,7 @@ fn main() {
     println!("  en dusuk: {}   en yuksek: {}", levels[0], levels[levels.len() - 1]);
 
     let mut crits = vec![CritMultiplier(2.0), CritMultiplier(1.25), CritMultiplier(3.0)];
-    // carpanlar.sort();
+    // crits.sort();
     //   E0277: the trait bound `CritMultiplier: Ord` is not satisfied
     //   -> f64 iceriyor, NaN yuzunden tam siralama yok
     crits.sort_by(|a, b| a.partial_cmp(b).unwrap());   // PartialOrd yetiyor
@@ -173,7 +173,7 @@ fn main() {
     println!("  {:?} / {}", Level::default(), Level::default());
 
     println!("-- tip guvenligi --");
-    // let yanlis = okcu + Mana(10);
+    // let wrong = archer_hp + Mana(10);
     //   E0308: expected `Hp`, found `Mana`
     //   Can ile mana ayri tip oldugu icin KARISAMAZLAR. Bedeli sifir:
     println!("  Hp = {} bayt, i32 = {} bayt",

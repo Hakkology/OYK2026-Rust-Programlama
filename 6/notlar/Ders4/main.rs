@@ -90,8 +90,8 @@ impl Describe for &str {
 // ---------------------------------------------------------------
 // 3) NEWTYPE: orphan rule'un etrafindan dolasmak
 // ---------------------------------------------------------------
-// Vec<&str>'e Display yazamayiz. Kendi tipimize sararsak tip BIZIM olur.
-struct Party(Vec<&'static str>);
+// Vec<String>'e Display yazamayiz. Kendi tipimize sararsak tip BIZIM olur.
+struct Party(Vec<String>);
 
 impl Display for Party {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -153,10 +153,7 @@ impl Summon for Dragon {
     fn summon() -> Dragon { Dragon { hp: 500, rage: 15 } }
 }
 
-// let s: Box<dyn Summon> = Box::new(Dragon::summon());
-//   E0038: the trait `Summon` cannot be made into an object
-//   Sebep: vtable'da metot basina TEK adres var; `-> Self` ile hangi tipin
-//   hangi boyutta donecegi calisma zamaninda bilinemez.
+// Summon dyn OLAMAZ - denemesi main icinde, yorumda duruyor.
 
 // Cozum: sorunlu metodu vtable'in DISINDA birak.
 trait Summonable {
@@ -192,7 +189,11 @@ fn main() {
     println!("  {}", "alev topu".describe());
 
     println!("-- newtype ile orphan rule asildi --");
-    let party = Party(vec!["Archer", "Knight", "Healer"]);
+    let party = Party(vec![
+        String::from("Archer"),
+        String::from("Knight"),
+        String::from("Healer"),
+    ]);
     println!("  {}", party);
 
     println!("-- blanket impl: Display olan her tip --");
@@ -207,7 +208,14 @@ fn main() {
     // tam nitelikli cagri sart:
     let summoned: Box<dyn Summonable> = Box::new(<Dragon as Summonable>::summon());
     println!("  {}", summoned.title());
-    // summoned.summon();  -> vtable'da yok, dyn uzerinden cagrilamaz
+    // let s: Box<dyn Summon> = Box::new(<Dragon as Summon>::summon());
+    //   E0038: the trait `Summon` is not dyn compatible
+    //   ...because associated function `summon` has no `self` parameter
+    //   Sebep: vtable'da metot basina TEK adres var; self almayan bir metotta
+    //   hangi nesnenin tablosuna bakilacagi belli degil.
+    // summoned.summon();
+    //   E0599: no method named `summon` found for struct `Box<dyn Summonable>`
+    //   -> where Self: Sized ile isaretledigimiz metot vtable'a girmedi
     println!("  somut tip uzerinden: {}", <Dragon as Summon>::summon().name());
 
     let bosses: Vec<Box<dyn Boss>> = vec![

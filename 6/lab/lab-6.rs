@@ -76,7 +76,7 @@ fn lab_1_credits() {
 // ORNEK: uc tur, tamamen farkli veriler
 struct Human {
     name: String,
-    home_world: &'static str,
+    home_world: String,
     income: Credits,
 }
 
@@ -117,13 +117,23 @@ struct SiliconDrone {
 // TODO 2e (DUVAR): uc vatandasi TEK bir Vec'e koymayi deneyin:
 //          let sicil = vec![human, vulcanoid, drone];
 //          Derlenmiyor. Hata kodu ne? Trait onlari neyde birlestirdi, neyde birlestirmedi?
-//          (Cozumu yarinin konusu - bugun sadece duvari gorun.)
+
+// TODO 2f (DUVARI YIKIN): ayni ucunu `Vec<Box<dyn Citizen>>` icine koyun.
+//          let sicil: Vec<Box<dyn Citizen>> = vec![Box::new(human), ...];
+//          Hepsini dolasip passport() yazdirin, toplam vergiyi hesaplayin.
+//          Sonra sunu da yazdirin ve farki aciklayin:
+//            std::mem::size_of::<&Human>()        ->  ?
+//            std::mem::size_of::<&dyn Citizen>()  ->  ?
+
+// TODO 2g: fn spawn(vip: bool) -> Box<dyn Citizen> yazin: vip ise Human,
+//          degilse SiliconDrone dondursun. Ayni seyi `-> impl Citizen` ile
+//          yazmayi deneyin, aldiginiz hata kodunu not edin.
 
 fn lab_2_citizen() {
     println!("-- lab 2: Citizen --");
     let human = Human {
         name: String::from("Ada"),
-        home_world: "Terra",
+        home_world: String::from("Terra"),
         income: Credits::from_credits(2500.0),
     };
     let vulcanoid = Vulcanoid { designation: String::from("V-77"), logic_score: 940 };
@@ -137,12 +147,12 @@ fn lab_2_citizen() {
 // LAB 3 - Registry<T>: generic sicil
 // ===========================================================================
 struct Registry<T> {
-    world: &'static str,
+    world: String,
     entries: Vec<T>,
 }
 
 // TODO 3a: `impl<T> Registry<T>` yazin - BUTUN T'ler icin:
-//          fn new(world: &'static str) -> Self
+//          fn new(world: &str) -> Self
 //          fn add(&mut self, item: T)
 //          fn len(&self) -> usize
 
@@ -176,7 +186,7 @@ fn lab_3_registry() {
 //          Hata kodu ne? Kuralin adi ne?
 
 // TODO 4c: newtype ile 4b'yi asin:
-//          struct Fleet(Vec<&'static str>);
+//          struct Fleet(Vec<String>);
 //          impl fmt::Display for Fleet   ->  "Filo[Nova + Orion]" gibi
 
 // TODO 4d: blanket impl yazin:

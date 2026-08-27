@@ -63,14 +63,14 @@ struct Sword {
 
 #[derive(Debug)]
 struct Slot<T> {
-    label: &'static str,
+    label: String,
     item: T,
 }
 
 // impl<T> ... : BUTUN T'ler icin
 impl<T> Slot<T> {
-    fn new(label: &'static str, item: T) -> Self {
-        Slot { label, item }
+    fn new(label: &str, item: T) -> Self {
+        Slot { label: label.to_string(), item }
     }
     fn item(&self) -> &T {
         &self.item
@@ -159,9 +159,9 @@ fn main() {
     // sadece Slot<Potion>'da olan metot
     println!("  {}", potion_slot.drink());
     println!("  {}", sword_slot.swing());
-    // kilic.drink();
+    // sword_slot.drink();
     //   E0599: no method named `drink` found for struct `Slot<Sword>`
-    //   -> impl Slot<Potion> yazdik, kilic yuvasinda boyle bir metot YOK
+    //   -> impl Slot<Potion> yazdik, kilic yuvasinda (Slot<Sword>) boyle bir metot YOK
 
     println!("-- 4) iki tipli generic --");
     let loadout = Loadout { weapon: Sword { damage: 25 }, armor: "chainmail" };

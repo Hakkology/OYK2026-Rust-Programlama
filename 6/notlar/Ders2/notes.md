@@ -17,7 +17,7 @@ trait Unit {
 }
 
 impl Unit for Archer {
-    fn name(&self) -> &str { "Okcu" }
+    fn name(&self) -> &str { "Archer" }
     fn hp(&self) -> i32 { self.hp }
     fn attack_power(&self) -> i32 { 12 }
 }
@@ -53,9 +53,9 @@ Dikkat edilecek iki şey:
 - İsteyen ezer, istemeyen bedava alır:
 
 ```
-Okcu savasa hazir!                             ← varsayılan gövde
-Sifaci savasa hazir!                           ← varsayılan gövde
-Sovalye kalkanini kaldirdi! (25 zirh)          ← ezilmiş gövde
+Archer savasa hazir!                           ← varsayılan gövde
+Healer savasa hazir!                           ← varsayılan gövde
+Knight kalkanini kaldirdi! (25 zirh)           ← ezilmiş gövde
 GRAAAH! Alevler yukseliyor!                    ← ezilmiş gövde
 ```
 
@@ -70,9 +70,9 @@ impl Archer { fn quiver(&self) -> String { ... } }   // sadece Archer'da (inhere
 impl Unit for Archer { ... }                          // sözleşmenin karşılığı
 ```
 
-İkisi bir arada yaşar: `okcu.quiver()` sadece okçuda vardır, `sovalye.quiver()` →
+İkisi bir arada yaşar: `archer.quiver()` sadece okçuda vardır, `knight.quiver()` →
 `E0599`. Aynı isim çakışırsa tipin kendi metodu öncelik alır; trait sürümünü çağırmak
-için `Unit::name(&okcu)` yazarsınız.
+için `Unit::name(&archer)` yazarsınız.
 
 ## Bound'un üç yazımı
 
@@ -92,9 +92,9 @@ Peki neden üç tane var? Fark **iki parametre** olunca ortaya çıkar:
 | `fn skirmish(a: &impl Unit, b: &impl Unit)` | ikisi **farklı tip** olabilir — karma savaş |
 
 ```rust
-duel(&okcu, &okcu2)        // çalışır, ikisi de Archer
-duel(&okcu, &ejderha)      // E0308: mismatched types
-skirmish(&okcu, &ejderha)  // çalışır
+duel(&archer, &archer2)      // çalışır, ikisi de Archer
+duel(&archer, &dragon)       // E0308: mismatched types
+skirmish(&archer, &dragon)   // çalışır
 ```
 
 `T` bir **tek** tipe bağlanır; `impl Trait` her parametre için ayrı bir tip demektir.
@@ -137,7 +137,7 @@ gerekir. `Dragon` ile `Goblin` farklı boyutta; "ikisinden biri" diye bir tip yo
 Dört birimi tek bir orduya koymak isteyin:
 
 ```rust
-let ordu = vec![okcu, sovalye, ejderha, sifaci];   // E0308: farklı tipler
+let army = vec![archer, knight, dragon, healer];   // E0308: farklı tipler
 ```
 
 Olmuyor. `Vec<T>` tek tip tutar; `Archer` ile `Dragon` ayrı tiplerdir. Trait onları

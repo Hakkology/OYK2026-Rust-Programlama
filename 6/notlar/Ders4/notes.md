@@ -72,10 +72,10 @@ impl Describe for &str { ... }     // "alev topu".describe()
 
 ### 1. Orphan rule'un etrafından dolaşmak
 
-`Vec<&str>`'e `Display` yazamıyorduk. Sarmalayınca tip bizim oluyor:
+`Vec<String>`'e `Display` yazamıyorduk. Sarmalayınca tip bizim oluyor:
 
 ```rust
-struct Party(Vec<&'static str>);
+struct Party(Vec<String>);
 impl Display for Party { ... }        // artık serbest
 ```
 
@@ -88,7 +88,7 @@ Birlik[Archer + Knight + Healer]
 Ders 3'teki `Hp`/`Mana` ayrımı da bir newtype'tı. İkisi de `i32` tutuyordu ama
 karışmıyorlardı.
 
-Bedeli sıfırdır: `struct Party(Vec<&str>)` bellekte `Vec<&str>` ile aynı yeri kaplar.
+Bedeli sıfırdır: `struct Party(Vec<String>)` bellekte `Vec<String>` ile aynı yeri kaplar.
 
 ## Blanket implementation
 

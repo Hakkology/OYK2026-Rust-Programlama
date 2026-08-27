@@ -263,7 +263,8 @@ tamamen kaybolmuştur — üç komut kalmıştır. "Zero cost" tam olarak budur.
 
 ## 9. Object safety — her trait `dyn` olamaz
 
-Üç ihlal, üçü de `E0038` (hepsi doğrulandı):
+Üç ihlal, üçü de `E0038` (hepsi doğrulandı). Kuralın eski adı *object safety*,
+derleyicinin bugünkü dilinde *dyn compatibility*:
 
 ```rust
 trait T { fn f<X>(&self, x: X); }         // generic metot
@@ -272,7 +273,7 @@ trait T { fn create() -> Self; }          // self almıyor
 ```
 
 ```
-error[E0038]: `T` cannot be made into an object
+error[E0038]: the trait `T` is not dyn compatible
 ```
 
 Sebep tek ve fizikseldir: **vtable'da her metodun tek bir adresi olmalı ve boyutu
