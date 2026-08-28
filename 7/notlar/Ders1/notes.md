@@ -1,7 +1,13 @@
 # Gün 7 · Ders 1 — Akıllı İşaretçiler: `Box`, `Rc`, `RefCell`
 
-Dünya: gece vardiyası dedektiflik bürosu. Dosyalar, ipucu zincirleri, aynı dosyaya bakan
-birden çok dedektif.
+Dünya: dedektiflik bürosu. Ders boyunca **dört tip** dolaşıyor, hepsi bu:
+
+| tip | ne gösteriyor |
+|---|---|
+| `Lead` | ipucu zinciri — `Box` |
+| `MyBox<T>` | kendi kutumuz — `Deref` |
+| `CaseFile` | dosya — `Drop`, `Rc`, `RefCell` |
+| `Case` / `Detective` | dava ve ekibi — `Weak` |
 
 ## Akıllı işaretçi nedir
 
@@ -22,7 +28,7 @@ belleği bırakır. Bugün üçünü ekliyoruz:
 Her ipucu bir sonrakine götürüyor. Doğrudan yazarsanız:
 
 ```rust
-struct Lead { note: String, next: Option<Lead> }
+struct Lead { text: String, next: Option<Lead> }
 ```
 
 ```
@@ -34,7 +40,7 @@ Derleyici boyutu hesaplayamıyor: `Lead` = `String` + `Lead` = `String` + `Strin
 
 ```rust
 struct Lead {
-    note: String,
+    text: String,
     next: Option<Box<Lead>>,
 }
 ```
@@ -46,9 +52,9 @@ otoparktaki bilet -> plaka kaydi -> gece bekcisinin ifadesi
 ### 2. Büyük veriyi taşımadan aktarmak
 
 ```
-[u8; 4096]         4096 bayt
-Box<[u8; 4096]>       8 bayt
-Option<Box<Lead>>     8 bayt
+[u8; 4096]          4096 bayt
+Box<[u8; 4096]>        8 bayt   <- icindeki ne olursa olsun bir pointer
+Option<Box<Lead>>      8 bayt   <- Option bedava (Gun 4: niche)
 ```
 
 Diziyi bir fonksiyona geçerken 4 KB kopyalanır; `Box` ile 8 bayt taşınır.
@@ -66,9 +72,9 @@ Gün 6'da `Vec<Box<dyn Unit>>` yazmıştık. Sebebi aynı: `dyn Unit`'in boyutu 
 `Box`'ın sihri yok; `Deref` implemente eden bir tip. Kendimiz de yazabiliriz:
 
 ```rust
-struct CaseBox<T>(T);
+struct MyBox<T>(T);
 
-impl<T> Deref for CaseBox<T> {
+impl<T> Deref for MyBox<T> {
     type Target = T;                 // Gün 6: associated type
     fn deref(&self) -> &T { &self.0 }
 }
@@ -78,14 +84,14 @@ impl<T> Deref for CaseBox<T> {
 derleyici referans beklenen yerde bu zinciri kendiliğinden takip eder.
 
 ```
-&CaseBox<String>  ->  &String  ->  &str
+&MyBox<String>  ->  &String  ->  &str
 ```
 
 ```rust
-fn announce(text: &str) -> String { ... }
+fn duyur(metin: &str) -> String { ... }
 
-announce(&boxed);     // &CaseBox<String> geçti
-announce(&owned);     // &String geçti
+duyur(&kutu);                            // &MyBox<String> geçti
+duyur(&String::from("dosya 48 acildi")); // &String geçti
 ```
 
 Gün 3 Ders 3'te "parametrede `&str` al, `&String` alma" demiştik ve nedenini
@@ -102,13 +108,13 @@ std'deki örnekler: `String -> str`, `Vec<T> -> [T]`, `Box<T> -> T`, `Rc<T> -> T
 Kapsam bitince derleyici `drop`'u kendisi çağırır, sıra **terstir**:
 
 ```
-    iki takip suruyor
-    [drop] Liman deposu takibi sonlandirildi
-    [drop] Kordon Kafe takibi sonlandirildi
+    iki dosya acik
+    [drop] 47-B dosyasi kapandi
+    [drop] 47-A dosyasi kapandi
 ```
 
-Erken düşürmek isterseniz `drop(x)` yazarsınız — `x.drop()` **değil**, o E0040 verir
-(Gün 2'de görmüştük).
+Son açılan önce kapanıyor. Erken düşürmek isterseniz `drop(x)` yazarsınız — `x.drop()`
+**değil**, o E0040 verir (Gün 2'de görmüştük).
 
 ## `Rc<T>` — paylaşılan sahiplik
 
@@ -116,18 +122,26 @@ Gün 2'de "her verinin **tek** sahibi var" demiştik. Bazen yetmiyor: aynı dosy
 dedektif de bakıyor. `Rc` = *reference counted*.
 
 ```rust
-let file = Rc::new(CaseFile::new("47-B"));
-let for_alvarez = Rc::clone(&file);      // veri kopyalanmıyor, sayaç artıyor
+let dosya = Rc::new(CaseFile::new("KRG-12"));
+let alvarez = Rc::clone(&dosya);         // veri kopyalanmıyor, sayaç artıyor
 ```
 
 ```
 sayac: 1
-sayac: 2
-sayac (blok icinde): 3
-sayac (blok bitti): 2
+sayac: 2   <- Alvarez de bakiyor
+sayac: 3   <- gece vardiyasi da acti
+sayac: 2   <- vardiya bitti
 ```
 
-Veri, sayaç sıfıra inince düşer. Dört kural:
+Veri, sayaç **sıfıra inince** düşer — `CaseFile`'a `Drop` yazdığımız için bunu gözle
+görüyoruz:
+
+```
+Alvarez birakti, sayac: 1
+    [drop] KRG-12 dosyasi kapandi
+```
+
+Dört kural:
 
 - `Rc::clone(&x)` **ucuzdur** — veriyi kopyalamaz, sayacı artırır
 - `x.clone()` yerine `Rc::clone(&x)` yazın; okuyan ucuz olduğunu görsün (konvansiyon)
@@ -151,13 +165,13 @@ struct CaseFile {
 }
 
 impl CaseFile {
-    fn add_note(&self, note: &str) {          // &self, &mut self DEĞİL
-        self.notes.borrow_mut().push(note.to_string());
+    fn not_ekle(&self, not: &str) {           // &self, &mut self DEĞİL
+        self.notes.borrow_mut().push(not.to_string());
     }
 }
 ```
 
-`file` `mut` değil ama içindeki notlar değişiyor. "İçsel mutasyon" budur.
+`dosya` `mut` değil ama içindeki notlar değişiyor. "İçsel mutasyon" budur.
 
 | | ihlal ne zaman yakalanır | müşteriye gider mi |
 |---|---|---|
@@ -174,7 +188,7 @@ RefCell already borrowed
 `try_borrow_mut()` panic yerine `Result` döndürür:
 
 ```
-ikinci borrow_mut REDDEDILDI - already borrowed
+ikinci borrow_mut REDDEDILDI (already borrowed)
 ```
 
 Bu yüzden `RefCell` **son çaredir**. Derleme zamanında çözebiliyorsanız orada çözün.
@@ -190,7 +204,7 @@ ziyaret.set(ziyaret.get() + 1);
 ```
 
 ```
-Cell sayac: 2 (borrow yok, panic riski yok)
+sayac 2 | Cell deger kopyalar, RefCell referans verir
 ```
 
 | | ne verir | panic riski | ne zaman |
@@ -200,8 +214,12 @@ Cell sayac: 2 (borrow yok, panic riski yok)
 
 ## `Rc<RefCell<T>>`
 
-Paylaşılan **ve** değiştirilebilir. Bugünkü `CaseFile` tam olarak bu: `Rc` ile iki
-dedektif aynı dosyayı tutuyor, `RefCell` ile ikisi de not ekleyebiliyor.
+Paylaşılan **ve** değiştirilebilir. `Rc<CaseFile>` tam olarak bu: `Rc` ile iki dedektif
+aynı dosyayı tutuyor, `RefCell` ile ikisi de not ekleyebiliyor.
+
+```
+KRG-12 dosyasinda 2 not var
+```
 
 > `Rc<RefCell<T>>` görünce önce "başka yolu var mı?" diye sorun. Çoğu zaman veriyi
 > yeniden tasarlamak daha iyi bir çözümdür.
@@ -218,17 +236,16 @@ sadece bellek boşalmaz.
 - yukarı doğru (dedektif → birim) = `Weak`, sahiplik yok
 
 ```rust
-struct Department { detectives: RefCell<Vec<Rc<Detective>>> }
-struct Detective  { department: RefCell<Weak<Department>>  }
+struct Case      { team: RefCell<Vec<Rc<Detective>>> }   // aşağı: sahiplik
+struct Detective { case: RefCell<Weak<Case>>         }   // yukarı: sahiplik yok
 ```
 
 `Weak` sahiplenmediği için hedefi düşmüş olabilir; bu yüzden `upgrade()` `Option` döner.
 
 ```
-birim sayaci  : strong 1 / weak 1
-Alvarez'in birimi: Cinayet Masasi
-program bitiyor, drop ciktilari:
-    [drop] Cinayet Masasi birimi kapandi
+dava sayaci: strong 1 / weak 1
+Alvarez'in dosyasi: LMN-8
+    [drop] LMN-8 dosyasi kapandi
     [drop] Alvarez evine gitti
 ```
 
@@ -238,23 +255,22 @@ program bitiyor, drop ciktilari:
 bağlantının tipi:
 
 ```rust
-struct Detective  { department: RefCell<Weak<Department>> }        // sahiplik YOK
-struct LeakyAgent { dept: RefCell<Option<Rc<LeakyDept>>> }         // sahiplik VAR
+struct Detective      { case: RefCell<Weak<Case>>            }   // sahiplik YOK
+struct LeakyDetective { case: RefCell<Option<Rc<LeakyCase>>> }   // sahiplik VAR
 ```
 
 `Weak` sürümü:
 
 ```
-program bitiyor, drop ciktilari:
-    [drop] Cinayet Masasi birimi kapandi
+    [drop] LMN-8 dosyasi kapandi
     [drop] Alvarez evine gitti
 ```
 
 `Rc` sürümü:
 
 ```
-    sayaclar: birim 2 / dedektif 2
-    blok bitti - YUKARIDA HIC DROP SATIRI YOK.
+  sayaclar: dava 2 / dedektif 2
+  blok bitti - HIC DROP SATIRI YOK. Ikisi birbirini tutuyor: bellek sizdi.
 ```
 
 İkisi birbirini tuttuğu için sayaçlar 2'de takılı kaldı, hiçbir zaman sıfıra inmedi.
@@ -297,7 +313,7 @@ değil graf olduğunu söyler. Bazen doğrudur (GUI, oyun sahnesi), bazen tasar�
 `Deref` okuma tarafını hallediyor; yazma tarafı için ikizi var:
 
 ```rust
-impl<T> DerefMut for CaseBox<T> {
+impl<T> DerefMut for MyBox<T> {
     fn deref_mut(&mut self) -> &mut T { &mut self.0 }
 }
 ```
