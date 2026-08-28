@@ -133,22 +133,64 @@ fn preferred<'a>(primary: &'a str, _fallback: &str) -> &'a str {
 
 ## Elision — neden çoğu zaman `'a` yazmıyoruz
 
-Derleyici üç kuralı sırayla uygular:
+Derleyici üç kuralı **sırayla** uygular. Çözülürse siz `'a` yazmazsınız; çözülmezse
+hata alırsınız. Üçünün de örneği `main.rs`'te, hem elision'lı hem açık hâliyle:
 
-1. Referans olan **her parametre** kendi ömrünü alır
-2. **Tek** girdi ömrü varsa, çıkışa o atanır
-3. Parametrelerden biri `&self` ya da `&mut self` ise, çıkışa `self`'in ömrü atanır
-
-Bu üçü %90 durumu kapsar, o yüzden `'a` nadiren yazılır.
+### Kural 1 — referans olan her parametre kendi ömrünü alır
 
 ```rust
-fn first_word(s: &str) -> &str { ... }                    // yazmaya gerek yok
-fn first_word_explicit<'a>(s: &'a str) -> &'a str { ... }  // aynı fonksiyon
+fn same_length(a: &str, b: &str) -> bool                          // yazdığınız
+fn same_length<'a, 'b>(a: &'a str, b: &'b str) -> bool            // derleyicinin gördüğü
 ```
 
-Sınıfa sorun: `first_word` neden çalışıyor da `longer_statement` çalışmıyor?
-**Cevap 2. kural:** birinde tek girdi var, diğerinde iki — ikincisinde kural devreye
-girmiyor, belirsizlik kalıyor, açık yazmak gerekiyor.
+İki ayrı ömür atandı. Fonksiyon referans **döndürmediği** için iş burada biter — bağlanacak
+bir çıkış yok.
+
+### Kural 2 — tek girdi ömrü varsa çıkışa o atanır
+
+```rust
+fn first_word(s: &str) -> &str                                    // yazdığınız
+fn first_word<'a>(s: &'a str) -> &'a str                          // derleyicinin gördüğü
+```
+
+Tek girdi olduğu için belirsizlik yok: dönen referans `s`'ten gelir, başka ihtimal yok.
+
+### Kural 3 — `&self` varsa çıkışa `self`'in ömrü atanır
+
+```rust
+impl Casebook {
+    fn title(&self) -> &str                                       // yazdığınız
+    fn title<'a>(&'a self) -> &'a str                             // derleyicinin gördüğü
+}
+```
+
+Bu kural metotları neredeyse tamamen `'a`'dan kurtarır. İki referans girdi olsa bile
+çalışır:
+
+```rust
+fn find(&self, keyword: &str) -> Option<&String>
+```
+
+Dönen referans **`self`'e** bağlıdır, `keyword`'e değil. Kanıtı çıktıda:
+
+```
+kural 3 | arama           : Some("23:40 tanik beyani")
+kural 3 | defter yasiyor  : 2 kayit
+```
+
+`keyword` kısa yaşayan bir `String`'di ve bloktan çıkınca düştü; defter yerinde duruyor.
+
+### Kurallar yetmezse
+
+```rust
+fn longer_statement(a: &str, b: &str) -> &str      // E0106
+```
+
+Kural 1 iki ayrı ömür verdi, kural 2 işlemedi (tek girdi değil), kural 3 işlemedi
+(`&self` yok). Geriye elle yazmak kalıyor.
+
+**Sınıfa sorun:** `first_word` neden çalışıyor da `longer_statement` çalışmıyor? Cevap
+2. kural — birinde tek girdi var, diğerinde iki.
 
 ## NLL — ömür son **kullanımda** biter
 

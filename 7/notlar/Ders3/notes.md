@@ -42,14 +42,14 @@ OwnedTranscript 24 bayt (String: ptr + len + cap)
 `Transcript` metni kopyalamıyor: içinde sadece bir `&str` var (ptr + uzunluk = 16 bayt).
 75 baytlık metin tek bir yerde duruyor. Büyük dosyalarda bu ciddi kazanç.
 
-## Metotlarda elision — 3. kural
+## Metotlarda `'a` yazmıyoruz
 
 ```rust
 fn first_line(&self) -> &str
 ```
 
-`&self` var, o yüzden çıkışa `self`'in ömrü atanıyor. Yazmasak da `-> &'a str` demek.
-Ders 2'deki üçüncü kural tam olarak buydu.
+`&self` olduğu için çıkışa `self`'in ömrü atanır — Ders 2'deki üçüncü kural. Yani bu
+struct'ın bütün metotları `'a`'dan muaf; ömrü **bir kez**, struct tanımında yazıyorsunuz.
 
 ## İki ömürlü metot
 
@@ -191,5 +191,5 @@ sorun çıkmaz:
 'araba maviydi' dogrulandi mi: false
 ```
 
-Aslında elision bu imzayı zaten böyle çıkarırdı (1. kural: her referans kendi ömrünü
-alır). Açık yazmamızın tek sebebi ikisinin **ayrı** ömürler olduğunun görülmesi.
+Açık yazmamızın sebebi ikisinin **ayrı** ömürler olduğunun görülmesi; elision bu imzayı
+zaten böyle çıkarırdı.
