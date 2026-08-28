@@ -153,6 +153,25 @@ fn first_word(s: &str) -> &str                                    // yazdığın
 fn first_word<'a>(s: &'a str) -> &'a str                          // derleyicinin gördüğü
 ```
 
+
+fn longest_int<'a>(x: &'a i32, y: &'a i32) -> &'a i32 {
+    if *x >= *y {
+        x
+    } else {
+        y
+    }
+}
+
+let x = 10;
+    let result: &i32;
+
+    {
+        let y = 20;
+        result = longest_int(&x, &y);
+    } // `y` burada kapsam dışı kalır ve ölür.
+
+    println!("result: {result}"); // HATA: `y` does not live long enough
+
 Tek girdi olduğu için belirsizlik yok: dönen referans `s`'ten gelir, başka ihtimal yok.
 
 ### Kural 3 — `&self` varsa çıkışa `self`'in ömrü atanır
