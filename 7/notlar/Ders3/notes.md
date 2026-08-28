@@ -74,6 +74,38 @@ eski kaynagin ilk satiri: tanik A: araba maviydi
 yeni ilk satir          : tanik A duzeltme: araba lacivertti
 ```
 
+### Aynı kalıp, dilim üzerinde
+
+Referans tutan struct yalnızca `&str` için değil — her dilim için aynı:
+
+```rust
+struct EvidenceLog<'a> { entries: &'a [u32] }
+
+impl<'a> EvidenceLog<'a> {
+    fn update_entries<'b>(&'b mut self, new_entries: &'a [u32]) -> &'b [u32] { ... }
+}
+```
+
+Burada `'b`'nin ne işe yaradığı **canlı** görünüyor. Dönen `old`, `log`'dan alınan
+**mut ödüncü** taşıyor; o ödünç `old`'un son kullanımına kadar sürüyor. İkisini aynı
+satırda yazdıramazsınız:
+
+```rust
+println!("{:?} {:?}", old, log.entries);
+```
+
+```
+error[E0502]: cannot borrow `log.entries` as immutable because it is also borrowed as mutable
+```
+
+Ayrı satırlara bölünce çalışır — NLL devreye girer, `old`'un ömrü son kullanımında biter
+(Ders 2). `'b`, "bu ödünç ne kadar sürecek" sorusunun cevabıdır.
+
+```
+eski kayit: [1041, 1042, 1055]
+yeni kayit: [2001, 2002]
+```
+
 ## Karar: referans mı tut, sahiplen mi?
 
 | | referans tut (`&'a str`) | sahiplen (`String`) |

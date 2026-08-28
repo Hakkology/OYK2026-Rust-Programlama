@@ -19,17 +19,13 @@ fn min_weight_rule(threshold: u8) -> impl Fn(&Lead) -> bool {
     move |l: &Lead| l.weight >= threshold
 }
 
-// Cevre YAKALAYAN iki closure'i impl Fn ile donduremeyiz - iki ayri tiptirler:
+// Yakalayan iki closure impl Fn ile dondurulemez - iki ayri tiptirler:
 // fn rule_for_broken(mode: &str, threshold: u8) -> impl Fn(&Lead) -> bool {
 //     if mode == "strict" { move |l: &Lead| l.weight >= threshold }
 //     else { move |l: &Lead| l.weight >= threshold / 2 }
 // }
-//   E0308: `if` and `else` have incompatible types
-//   "expected closure, found a different closure"
-//   Gun 6'da Dragon/Archer ile ayni duvara carpmistik; cozum de ayni: Box<dyn>.
-//
-// DIKKAT: hicbir sey yakalamayan iki closure ile ayni sey DERLENIR - cunku
-// ikisi de fn(&Lead) -> bool pointer'ina donusur (Ders 4) ve ortak tipte bulusurlar.
+//   E0308: expected closure, found a different closure. Cozum Box<dyn> (Gun 6).
+//   Not: hicbir sey YAKALAMAYAN iki closure derlenir - ikisi de fn pointer'a doner.
 
 // Box<dyn Fn>: if/else ile FARKLI closure'lar donebiliyoruz.
 fn rule_for(mode: &str) -> Box<dyn Fn(&Lead) -> bool> {
@@ -81,6 +77,18 @@ impl RuleBook {
     }
 }
 
+// Kombinator zinciri: her adim Option/Result donduruyor
+fn weight_sum_chained(a: &str, b: &str) -> Option<u32> {
+    a.parse::<u32>().ok().and_then(|x| b.parse::<u32>().ok().map(|y| x + y))
+}
+
+// Ayni is, ? ile (Gun 5) - daha duz okunuyor
+fn weight_sum_question(a: &str, b: &str) -> Result<u32, std::num::ParseIntError> {
+    let x: u32 = a.parse()?;
+    let y: u32 = b.parse()?;
+    Ok(x + y)
+}
+
 fn main() {
     let leads = vec![
         Lead { note: String::from("otoparktaki bilet"), weight: 8, informant: String::from("bekci") },
@@ -114,7 +122,7 @@ fn main() {
         passing.iter().map(|l| l.note.as_str()).collect::<Vec<_>>());
 
     println!("-- 4) iterator kombinatorleri (Gun 4'ten tanidik) --");
-    // Kombinatorler TEMBELDIR: collect/sum/count cagrilana kadar hicbir sey olmaz.
+    // Kombinatorler tembeldir: collect/sum/count cagrilana kadar is yapilmaz.
     let notes: Vec<String> = leads
         .iter()
         .filter(|l| l.weight >= 5)
@@ -136,6 +144,29 @@ fn main() {
         leads.iter().any(|l| l.weight > 8),
         leads.iter().all(|l| l.weight > 1));
 
+    println!("-- 4b) ADAPTOR TEMBELDIR, TUKETICI zinciri baslatir --");
+    // Adaptor (map/filter) hicbir sey YAPMAZ, sadece tarif kurar.
+    let tarif = leads.iter().map(|l| {
+        println!("    >> {} isleniyor", l.note);   // zincir calisirsa gorunur
+        l.weight
+    });
+    println!("  zincir kuruldu - yukarida hic satir yok, degil mi?");
+    let toplam: u32 = tarif.map(|w| w as u32).sum();   // TUKETICI: simdi akiyor
+    println!("  sum() cagrildi -> toplam {}", toplam);
+    // Tuketmezseniz derleyici uyarir:
+    //   warning: unused `Map` that must be used
+    //   note: iterators are lazy and do nothing unless consumed
+
+    println!("-- 4c) fold: en genel tuketici --");
+    // sum, product, count, max ... hepsi fold'un ozel hali.
+    let elle: u32 = leads.iter().fold(0, |acc, l| acc + l.weight as u32);
+    let hazir: u32 = leads.iter().map(|l| l.weight as u32).sum();
+    println!("  fold {} == sum {}", elle, hazir);
+    // fold baslangic degeri alir; reduce almaz ve Option doner:
+    let en_uzun = leads.iter().map(|l| l.note.as_str())
+        .reduce(|a, b| if a.len() >= b.len() { a } else { b });
+    println!("  reduce (baslangicsiz) -> {:?}", en_uzun);
+
     println!("-- 5) Option uzerinde kombinatorler --");
     let found = leads.iter().find(|l| l.note.contains("plaka"));
     // map: Some'in ICINI donusturur, None'a dokunmaz
@@ -150,4 +181,11 @@ fn main() {
     // ok_or: Option -> Result (Gun 5)
     let as_result: Result<&Lead, &str> = found.ok_or("plaka ipucu yok");
     println!("  ok_or        : {:?}", as_result.map(|l| &l.note));
+
+    println!("-- 6) ayni is: kombinatorle mi, ? ile mi --");
+    println!("  kombinator: {:?}", weight_sum_chained("8", "9"));
+    println!("  kombinator: {:?}", weight_sum_chained("8", "abc"));
+    println!("  ? ile     : {:?}", weight_sum_question("8", "9"));
+    println!("  ? ile     : {:?}", weight_sum_question("8", "abc").is_err());
+    // Ikisi ayni isi yapiyor. Zincir kisa ise kombinator, uzun/dallanan ise ? daha okunur.
 }

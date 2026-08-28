@@ -110,12 +110,58 @@ sort_by_key  : [9, 8, 3, 2]
 any / all    : true / true
 ```
 
-**Kombinatörler tembeldir:** `filter` ve `map` hiçbir şey hesaplamaz. Zinciri `collect`,
-`sum`, `count`, `next` gibi **tüketen** bir metot tetikler. Bu yüzden ara adımlarda
-geçici `Vec`'ler oluşmaz.
+### Adaptör / tüketici — dersin can alıcı ayrımı
+
+| | alır | döndürür |
+|---|---|---|
+| **adaptör** (`map`, `filter`, `take`) | iterator | iterator — **tembel**, hiçbir şey yapmaz |
+| **tüketici** (`collect`, `sum`, `count`, `fold`) | iterator | değer — **zinciri başlatır** |
+
+Kanıtı `main.rs`'te canlı: `map`'in içine `println!` koyduk.
+
+```
+zincir kuruldu - yukarida hic satir yok, degil mi?
+    >> otoparktaki bilet isleniyor
+    >> isimsiz telefon isleniyor
+    >> plaka kaydi isleniyor
+    >> dedikodu isleniyor
+sum() cagrildi -> toplam 22
+```
+
+Zincir kurulurken **tek satır** çalışmadı; `sum()` çağrılınca hepsi birden aktı.
+
+Tüketmezseniz derleyici uyarır:
+
+```
+warning: unused `Map` that must be used
+note: iterators are lazy and do nothing unless consumed
+```
+
+Bu tembelliğin bedeli yok, faydası büyük: ara adımlarda geçici `Vec`'ler oluşmaz,
+derleyici zinciri tek bir döngüye açar (loop fusion). Gün 1'de "zero-cost abstraction"
+dedik, Gün 6'da monomorphization ile ödedik; bu ikinci kanıt.
 
 `collect` hangi koleksiyona toplayacağını **tipten** anlar; belirsiz kalırsa tipi
 yazarsınız (`collect::<Vec<_>>()`).
+
+### `fold` — en genel tüketici
+
+`sum`, `product`, `count`, `max`… hepsi `fold`'un özel hâli:
+
+```rust
+leads.iter().fold(0, |acc, l| acc + l.weight as u32)   // = .map(...).sum()
+```
+
+```
+fold 22 == sum 22
+```
+
+`fold` başlangıç değeri alır. `reduce` almaz — bu yüzden boş iterator ihtimaline karşı
+`Option` döndürür:
+
+```rust
+.reduce(|a, b| if a.len() >= b.len() { a } else { b })   // Some("otoparktaki bilet")
+```
 
 ## `Option` üzerinde kombinatörler
 
@@ -139,3 +185,29 @@ ok_or        : Ok("plaka kaydi")
 
 `unwrap_or_else`'in değerli yanı: pahalı bir varsayılan hesaplaması ancak gerekirse
 çalışır. `unwrap_or(pahali_hesap())` yazarsanız hesap **her zaman** yapılır.
+
+## Kombinatör mü, `?` mi
+
+Aynı iş iki türlü yazılabilir:
+
+```rust
+fn weight_sum_chained(a: &str, b: &str) -> Option<u32> {
+    a.parse::<u32>().ok().and_then(|x| b.parse::<u32>().ok().map(|y| x + y))
+}
+
+fn weight_sum_question(a: &str, b: &str) -> Result<u32, ParseIntError> {
+    let x: u32 = a.parse()?;
+    let y: u32 = b.parse()?;
+    Ok(x + y)
+}
+```
+
+```
+kombinator: Some(17)    / None
+? ile     : Ok(17)      / Err(...)
+```
+
+Gün 5'te `?`'in `From` üzerinden çalıştığını görmüştük; ikisi aynı işi yapıyor.
+**Seçim ölçütü:** zincir kısa ve tek hatlıysa kombinatör; adım sayısı artıyor ya da
+araya `if`/`match` giriyorsa `?` daha okunur. Kombinatör zincirini üç adımdan uzun
+tutmayın.

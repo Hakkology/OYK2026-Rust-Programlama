@@ -16,6 +16,26 @@ sadece ilişkiyi yazıyor.
 Her **değerin** bir ömrü vardır: doğduğu satırda başlar, düştüğü ya da **taşındığı**
 satırda biter. Gün 2'de ownership'i böyle anlatmıştık; "lifetime" o sürenin adıdır.
 
+Ömrü bitiren **üç** olay vardır:
+
+```rust
+// (a) kapsam bitti
+{ let temp = String::from("gecici tutanak"); }
+
+// (b) başka bir binding'e TAŞINDI
+let original = String::from("ilk tutanak");
+let moved = original;
+println!("{}", original);        // E0382: borrow of moved value
+
+// (c) fonksiyona DEĞERLE geçildi
+let report = String::from("gunluk rapor");
+file_away(report);
+println!("{}", report);          // E0382: ömrü çağrı satırında bitti
+```
+
+Gün 2'de bunu "ownership" diye öğrendik; "lifetime" o sürenin adı. Dikkat: (b) ve (c)'de
+değer hâlâ bellekte — ama **o binding'in** ömrü bitti.
+
 Değer taşımak serbesttir:
 
 ```rust
@@ -154,3 +174,60 @@ error[E0502]: cannot borrow `leads` as mutable because it is also borrowed as im
 | Lifetime çalışma zamanında vardır | Tamamen derleme zamanı; kod üretilmez |
 | Her referansa `'a` yazmak gerekir | Elision çoğunu halleder |
 | `'a` bir süre birimidir | Bir **isimdir**; "şu referansla aynı ömür" demek |
+
+## Hata mesajı çözücü
+
+Bugünün lab'ında bu kodlarla karşılaşacaksınız. Hepsi bu makinede derlenip doğrulandı;
+mesajı okuyunca hangi soruyu sorduğunu bilin:
+
+| kod | mesaj | ne diyor | tipik çözüm |
+|---|---|---|---|
+| `E0106` | missing lifetime specifier | "bu referans **nereden** geliyor?" | Girdi varsa `'a` ekleyin; yoksa sahiplik döndürün (`String`) |
+| `E0597` | `x` does not live long enough | Referans, gösterdiği veriden **uzun yaşıyor** | Veriyi daha dışarıda tanımlayın ya da klonlayın |
+| `E0515` | cannot return value referencing local variable | Yerelin referansını **döndürüyorsunuz** | Sahiplenen tipi döndürün |
+| `E0716` | temporary value dropped while borrowed | Geçici değer satır sonunda düştü | Geçiciyi bir `let` ile isimlendirin |
+| `E0505` | cannot move out of `x` because it is borrowed | Ödünç dururken **taşımaya** çalıştınız | Ödüncün son kullanımını taşımadan öne alın |
+| `E0502` | cannot borrow as mutable because also borrowed as immutable | Okuma ve yazma ödüncü **çakışıyor** | Okumanın son kullanımını yazmadan öne alın (NLL) |
+| `E0499` | cannot borrow `x` as mutable more than once | İki `&mut` aynı anda | Kapsamları ayırın |
+| `E0507` | cannot move out of borrowed content | `&`'nin arkasından değer taşıma | `clone()`, `take()` ya da referans döndürün |
+| `E0382` | use of moved value | Değer taşındı, sonra kullanıldı | Klonlayın ya da referans geçin |
+
+### Her birinin en kısa hâli
+
+Dokuzu da derlenip doğrulandı; hangisini alırsanız karşılığı burada:
+
+```rust
+// E0106 — donen referans nereden geliyor?
+fn ilk() -> &str { "a" }
+
+// E0597 — s blok bitince dustu, r hala gosteriyor
+let r; { let s = String::from("a"); r = &s; } println!("{}", r);
+
+// E0515 — yerelin referansi disari cikamaz
+fn ad() -> &'static str { let s = String::from("a"); &s }
+
+// E0716 — gecici deger satir sonunda dustu
+let r; { r = &String::from("a"); } println!("{}", r);
+
+// E0505 — odunc dururken tasima
+let v = vec![1]; let r = &v; let w = v; println!("{:?}{:?}", r, w);
+
+// E0502 — okuma odunci dururken yazma
+let mut v = vec![1]; let r = &v[0]; v.push(2); println!("{}", r);
+
+// E0499 — iki &mut ayni anda
+let mut v = vec![1]; let a = &mut v; let b = &mut v;
+
+// E0507 — & arkasindan deger tasima
+let v = vec![String::from("a")]; let s: String = v[0];
+
+// E0382 — tasindi, sonra kullanildi
+let s = String::from("a"); let t = s; println!("{}", s);
+```
+
+**Okuma sırası:** önce `-->` satırındaki **konuma** bakın, sonra `note:` ile başlayan
+açıklamayı okuyun, en sonda `help:` çoğu zaman doğrudan çözümü verir. Rust'ın hata
+mesajları ders anlatır; kapatmayın, okuyun.
+
+> Bu tablodaki hataların **hiçbiri** bir tehlike değil — hepsi derleyicinin sizi bir
+> tehlikeden koruduğu andır. Aynı kod C'de derlenir ve müşteride çöker.

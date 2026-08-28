@@ -1,0 +1,19 @@
+[package]
+name = "ders1"
+version = "0.1.0"
+edition = "2021"
+
+# FEATURE: istege bagli davranis. Varsayilan KAPALI.
+#   cargo test                      -> kapali
+#   cargo test --features tips      -> acik
+#   cargo test --all-features       -> hepsi acik
+[features]
+default = []
+tips = []
+
+# PROFILLER: cargo bunlari hazir tanimlar, uzerine yazabilirsiniz.
+[profile.dev]
+opt-level = 0        # hizli derleme, yavas kod, debug_assertions ACIK
+
+[profile.release]
+opt-level = 3        # yavas derleme, hizli kod, debug_assertions KAPALI

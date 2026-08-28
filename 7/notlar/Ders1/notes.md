@@ -179,6 +179,25 @@ ikinci borrow_mut REDDEDILDI - already borrowed
 
 Bu yüzden `RefCell` **son çaredir**. Derleme zamanında çözebiliyorsanız orada çözün.
 
+### `Cell<T>` — `RefCell`'in ucuz kardeşi
+
+`RefCell` çalışma zamanında ödünç **sayar**; bu bir bayrak tutmak ve panic riski demek.
+`Cell` saymaz — çünkü referans vermez, değeri **kopyalar**:
+
+```rust
+let ziyaret = Cell::new(0u32);
+ziyaret.set(ziyaret.get() + 1);
+```
+
+```
+Cell sayac: 2 (borrow yok, panic riski yok)
+```
+
+| | ne verir | panic riski | ne zaman |
+|---|---|---|---|
+| `Cell<T>` | değerin kopyası (`get`/`set`) | yok | küçük `Copy` tipler: sayaç, bayrak |
+| `RefCell<T>` | referans (`borrow`/`borrow_mut`) | var | `Vec`, `String`, büyük struct'lar |
+
 ## `Rc<RefCell<T>>`
 
 Paylaşılan **ve** değiştirilebilir. Bugünkü `CaseFile` tam olarak bu: `Rc` ile iki
@@ -213,8 +232,37 @@ program bitiyor, drop ciktilari:
     [drop] Alvarez evine gitti
 ```
 
-Son iki satır kanıt: `Weak` yerine `Rc` koysaydınız bu `drop` çıktıları **hiç
-görünmezdi** — ikisi birbirini tutup sızardı.
+### Sızıntıyı görelim
+
+`main.rs`'te aynı yapının `Weak` yerine `Rc` kullanan bir ikizi var. Tek fark geri
+bağlantının tipi:
+
+```rust
+struct Detective  { department: RefCell<Weak<Department>> }        // sahiplik YOK
+struct LeakyAgent { dept: RefCell<Option<Rc<LeakyDept>>> }         // sahiplik VAR
+```
+
+`Weak` sürümü:
+
+```
+program bitiyor, drop ciktilari:
+    [drop] Cinayet Masasi birimi kapandi
+    [drop] Alvarez evine gitti
+```
+
+`Rc` sürümü:
+
+```
+    sayaclar: birim 2 / dedektif 2
+    blok bitti - YUKARIDA HIC DROP SATIRI YOK.
+```
+
+İkisi birbirini tuttuğu için sayaçlar 2'de takılı kaldı, hiçbir zaman sıfıra inmedi.
+`Drop` çalışmadı, bellek serbest kalmadı. **Tek satırlık fark, kalıcı sızıntı.**
+
+> Sızıntı Rust'ta **güvenlidir**: veri okunmaz, program çökmez, sadece bellek boşalmaz.
+> Rust bellek güvenliğini garanti eder, sızıntıyı etmez. `Box::leak` bile güvenli bir
+> fonksiyondur. Yani bu, derleyicinin değil **sizin** çözeceğiniz bir tasarım sorunudur.
 
 ## Özet tablo
 
@@ -224,5 +272,35 @@ görünmezdi** — ikisi birbirini tutup sızardı.
 | `&mut T` | yok | evet | derleme |
 | `Box<T>` | tek | evet (`mut` ise) | derleme |
 | `Rc<T>` | paylaşılan | hayır | derleme |
+| `Cell<T>` | tek | evet (kopyalayarak) | — |
 | `RefCell<T>` | tek | evet | **çalışma** |
 | `Rc<RefCell<T>>` | paylaşılan | evet | **çalışma** |
+
+## Karar sırası
+
+Sınıf bunu ezberlemesin, **sırayla sorsun**:
+
+1. **Referans (`&T`) yeter mi?** → Yeterse başka hiçbir şey kullanmayın. Çoğu kod burada biter.
+2. **Heap'te olması ya da boyutunun bilinmemesi mi gerekiyor?** → `Box<T>`
+3. **Gerçekten birden çok sahip mi var?** → `Rc<T>`. "Birden çok yerden okunuyor" değil,
+   "hangisinin önce biteceğini bilmiyorum" demek.
+4. **Paylaşılan veriyi değiştirmem gerekiyor mu?** → `Rc<RefCell<T>>` — ve önce
+   "veriyi yeniden tasarlasam kurtulur muyum?" diye sorun.
+5. **Geri/çapraz bağlantı var mı?** → O kenar `Weak`.
+6. **Thread'e mi geçecek?** → Gün 8.
+
+`Rc<RefCell<T>>` bir çözümdür ama aynı zamanda bir **kokudur**: veri modelinizin ağaç
+değil graf olduğunu söyler. Bazen doğrudur (GUI, oyun sahnesi), bazen tasarım hatasıdır.
+
+## `DerefMut`
+
+`Deref` okuma tarafını hallediyor; yazma tarafı için ikizi var:
+
+```rust
+impl<T> DerefMut for CaseBox<T> {
+    fn deref_mut(&mut self) -> &mut T { &mut self.0 }
+}
+```
+
+`&mut Box<String>` → `&mut String` → `&mut str` zinciri bu sayede çalışır. Kural aynı:
+`Deref` yalnızca akıllı işaretçiler içindir.

@@ -116,6 +116,26 @@ where
     F: Fn(&Lead) -> bool,
 ```
 
+## Bound'u ihtiyaca göre seçmek
+
+Gerçek bir fonksiyon birden çok kural alır ve her birinin ihtiyacı farklıdır:
+
+```rust
+fn screen_batch<V1, V2>(header: &str, leads: &[Lead], header_check: V1, each: V2) -> usize
+where
+    V1: FnOnce(&str) -> bool,      // sadece bir kez çağrılıyor
+    V2: Fn(&Lead) -> bool,         // her ipucu için çağrılıyor
+```
+
+```
+KRG-12 dosyasi : 2 ipucu
+XYZ-9 dosyasi  : 0 ipucu
+```
+
+Kural: **en geniş bound'u seçin.** `FnOnce` en geniştir — `Fn` olan bir closure da geçer,
+tersi geçmez. Kaç kez çağıracağınızı biliyorsanız fazlasını istemeyin; istemek çağıranı
+gereksiz yere kısıtlar.
+
 ## `fn` pointer — closure değil, fonksiyon adresi
 
 | | |

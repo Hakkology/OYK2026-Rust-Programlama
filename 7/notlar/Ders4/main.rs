@@ -42,6 +42,22 @@ where
 }
 
 // ---------------------------------------------------------------
+// 5) IKI FARKLI KURAL, IKI FARKLI TRAIT BOUND
+// ---------------------------------------------------------------
+// Bound'u ihtiyaca gore secin:
+//   V1 bir kez cagriliyor -> FnOnce (en genis) | V2 her ipucu icin -> Fn
+fn screen_batch<V1, V2>(header: &str, leads: &[Lead], header_check: V1, each: V2) -> usize
+where
+    V1: FnOnce(&str) -> bool,
+    V2: Fn(&Lead) -> bool,
+{
+    if !header_check(header) {
+        return 0;
+    }
+    leads.iter().filter(|l| each(l)).count()
+}
+
+// ---------------------------------------------------------------
 // 6) FN POINTER - closure degil, fonksiyon adresi
 // ---------------------------------------------------------------
 fn weight_over_five(l: &Lead) -> bool {
@@ -66,8 +82,7 @@ fn main() {
     let is_strong = |l: &Lead| l.weight >= threshold;   // threshold YAKALANDI
     // Ayni seyi fonksiyonla yapamayiz - fonksiyonun cevresi yoktur:
     // fn strong_fn(l: &Lead) -> bool { l.weight >= threshold }
-    //   E0434: can't capture dynamic environment in a fn item
-    //   -> fonksiyon ya parametre alir ya sabit kullanir.
+    //   E0434: fn'in cevresi yoktur; ya parametre alir ya sabit kullanir.
     println!("  esik {} -> guclu ipuclari: {:?}", threshold, filter_leads(&leads, is_strong));
 
     println!("-- 2) uc yakalama sekli --");
@@ -112,7 +127,19 @@ fn main() {
     println!("  String yakalayan    : {} bayt", size_of_val(&heavy));
     println!("  (String = ptr+len+cap = {} bayt)", size_of_val(&String::new()));
 
-    println!("-- 5) fn pointer --");
+    println!("-- 5) iki kural, iki bound --");
+    // header_check bir String'i SAHIPLENIYOR -> FnOnce
+    let case_prefix = String::from("KRG");
+    let header_ok = move |h: &str| h.starts_with(&case_prefix);
+    // each sadece okuyor -> Fn
+    let min_weight = 5;
+    let strong_enough = move |l: &Lead| l.weight >= min_weight;
+    println!("  KRG-12 dosyasi : {} ipucu", screen_batch("KRG-12", &leads, header_ok, strong_enough));
+    let header_ok2 = |h: &str| h.starts_with("KRG");
+    println!("  XYZ-9 dosyasi  : {} ipucu", screen_batch("XYZ-9", &leads, header_ok2, strong_enough));
+    // FnOnce en GENIS bound'dur: Fn olan bir closure da gecer, tersi gecmez.
+
+    println!("-- 6) fn pointer --");
     println!("  fonksiyon gecti     : {}", count_matching(&leads, weight_over_five));
     println!("  yakalamayan closure : {}", count_matching(&leads, |l| l.weight > 7));
     // count_matching(&leads, |l| l.weight >= threshold);

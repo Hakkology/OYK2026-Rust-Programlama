@@ -63,16 +63,35 @@ impl OwnedTranscript {
     }
 }
 
-// Fonksiyon icinde String uretip ondan referans tutan struct DONDUREMEZSINIZ:
+// Yerel String'e referans tutan struct dondurulemez:
 // fn build_broken() -> Transcript<'static> {
 //     let text = String::from("ifade metni");
 //     Transcript { source: &text }
 // }
-//   E0515: cannot return value referencing local variable `text`
-//   Gun 2'deki sarkan referansin ta kendisi.
-// Cozum: sahiplenen surumu dondurun.
+//   E0515: yerel `text` fonksiyon bitince dusuyor. Cozum: sahiplenen surum.
 fn build_owned() -> OwnedTranscript {
     OwnedTranscript::new("ifade metni\nikinci satir")
+}
+
+// ---------------------------------------------------------------
+// 2b) AYNI KALIP, DILIM UZERINDE
+// ---------------------------------------------------------------
+// Referans tutan struct sadece &str icin degil - her dilim icin ayni.
+struct EvidenceLog<'a> {
+    entries: &'a [u32],           // dosya numaralari
+}
+
+impl<'a> EvidenceLog<'a> {
+    // 'a : verinin omru | 'b : bu odunc almanin omru
+    fn update_entries<'b>(&'b mut self, new_entries: &'a [u32]) -> &'b [u32] {
+        let previous = self.entries;
+        self.entries = new_entries;
+        previous
+    }
+
+    fn highest(&self) -> Option<&u32> {
+        self.entries.iter().max()
+    }
 }
 
 // ---------------------------------------------------------------
@@ -120,6 +139,17 @@ fn main() {
     println!("  eski kaynagin ilk satiri: {}", previous_first);
     println!("  yeni ilk satir          : {}", transcript.first_line());
 
+    println!("-- 2b) ayni kalip, dilim uzerinde --");
+    let first_batch = [1041u32, 1042, 1055];
+    let second_batch = [2001u32, 2002];
+    let mut log = EvidenceLog { entries: &first_batch };
+    println!("  en yuksek dosya no: {:?}", log.highest());
+    let old = log.update_entries(&second_batch);
+    // `old` 'b omrunu tasiyor: mut odunc, old'un son kullanimina kadar surer.
+    // Ikisi ayni satirda -> E0502. Ayri satirda calisir (NLL).
+    println!("  eski kayit: {:?}", old);
+    println!("  yeni kayit: {:?}", log.entries);
+
     println!("-- 3) sahiplenen surum --");
     let owned = build_owned();
     println!("  {}", owned.first_line());
@@ -132,8 +162,7 @@ fn main() {
     println!("  T: 'static   : {}", boxed_note);
     // let local = String::from("gecici");
     // archive(&local);
-    //   E0597: `local` does not live long enough
-    //   &local'in tipi &'x String; 'x program boyu degil -> T: 'static saglanmiyor.
+    //   E0597: &local'in omru program boyu degil -> T: 'static saglanmiyor.
 
     println!("-- 5) coklu omur --");
     let claim = String::from("araba maviydi");

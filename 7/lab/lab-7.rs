@@ -4,17 +4,16 @@
 // Iskelet kod: TODO'lar doldurulana kadar kullanilmayan uyarilari normal.
 #![allow(unused)]
 //
-// SENARYO
-// Gece vardiyasi burosunda yeni bir dosya acildi: limandan bir kargo kayboldu.
-// Ipuclari zincir halinde ilerliyor, ayni dosyaya birden cok dedektif bakiyor,
-// tanik ifadeleri uzun metinler ve bunlari KOPYALAMADAN islemek istiyoruz.
+// NASIL CALISILIR
+//   Her bolumde uc tur satir var:
+//     ORNEK      -> calisan kod, size verildi. Once bunu calistirin.
+//     GOREV      -> siz yazacaksiniz. Altinda BEKLENEN CIKTI var, ona ulasin.
+//     HATA DENEYI-> kasten derlenmeyecek kod. Yorumu acin, hata KODUNU not edin,
+//                   sebebini bir cumleyle yazin, sonra geri kapatin.
 //
-// Bugunun bes dersi burada sirayla kullaniliyor:
-//   LAB 1 -> Box, Rc, RefCell, Weak            (Ders 1)
-//   LAB 2 -> lifetime: neden var                (Ders 2)
-//   LAB 3 -> struct'ta lifetime, 'static        (Ders 3)
-//   LAB 4 -> closure temelleri                  (Ders 4)
-//   LAB 5 -> closure'larla calismak             (Ders 5)
+// SENARYO
+// Limandan bir kargo kayboldu. Ipuclari zincir halinde, ayni dosyaya birden
+// cok dedektif bakiyor, tanik ifadeleri uzun metinler.
 
 use std::cell::RefCell;
 use std::mem::size_of;
@@ -29,9 +28,10 @@ fn main() {
 }
 
 // ===========================================================================
-// LAB 1 - Akilli isaretciler
+// LAB 1 - Akilli isaretciler                                        (Ders 1)
 // ===========================================================================
-// ORNEK: her ipucu bir sonrakine goturuyor.
+
+// ORNEK: ipucu zinciri. Box olmasa bu tip derlenmezdi.
 struct Clue {
     text: String,
     next: Option<Box<Clue>>,
@@ -41,20 +41,22 @@ impl Clue {
     fn new(text: &str) -> Clue {
         Clue { text: text.to_string(), next: None }
     }
+
+    // GOREV 1a: zincire yeni ipucu bagla. self'i TUKETIP yeni Clue dondur.
+    //   Ipucu: Clue { text: ..., next: Some(Box::new(self)) }
+    //   fn then(self, onceki: Clue) -> Clue { ... }
+
+    // GOREV 1b: zinciri yazdiran metot.
+    //   fn chain(&self) -> String
+    //   BEKLENEN: "otoparktaki bilet -> plaka kaydi -> gece bekcisi"
+    //   Ipucu: match &self.next { Some(s) => ..., None => ... }
 }
 
-// TODO 1a: `next: Option<Box<Clue>>` yerine `next: Option<Clue>` yazmayi DENEYIN.
-//          Hata kodu ne? Derleyici neden boyutu hesaplayamiyor, bir cumleyle yazin.
+// HATA DENEYI 1c: yukaridaki `next: Option<Box<Clue>>` yerine
+//   `next: Option<Clue>` yazip derleyin.  Hata kodu: ______
+//   Derleyici neden boyutu hesaplayamiyor?
 
-// TODO 1b: impl Clue icine `fn then(self, next: Clue) -> Clue` ekleyin:
-//          zincirin sonuna yeni ipucu baglasin (self'i tuketip yeni Clue dondursun).
-//          Sonra `fn chain(&self) -> String` yazin: "a -> b -> c" uretsin.
-
-// TODO 1c: size_of ile yazdirin ve farki aciklayin:
-//          [u8; 1024] / Box<[u8; 1024]> / Option<Box<Clue>>
-//          Ucuncusu neden Box ile ayni boyutta?
-
-// ORNEK: paylasilan dosya. `notes` RefCell, cunku `&self` ile not eklenecek.
+// ORNEK: paylasilan dosya. notes RefCell, cunku &self ile not eklenecek.
 struct CaseFile {
     code: String,
     notes: RefCell<Vec<String>>,
@@ -64,28 +66,14 @@ impl CaseFile {
     fn new(code: &str) -> CaseFile {
         CaseFile { code: code.to_string(), notes: RefCell::new(Vec::new()) }
     }
+
+    // GOREV 1d: iki metot ekleyin. DIKKAT: ikisi de &self aliyor, &mut self DEGIL.
+    //   fn add_note(&self, note: &str)
+    //   fn note_count(&self) -> usize
+    //   Ipucu: self.notes.borrow_mut().push(...)  /  self.notes.borrow().len()
 }
 
-// TODO 1d: CaseFile'a su metotlari ekleyin:
-//            fn add_note(&self, note: &str)     -> DIKKAT: &self, &mut self DEGIL
-//            fn note_count(&self) -> usize
-//          Sonra Rc::new(CaseFile::new("KRG-12")) olusturup iki dedektife
-//          Rc::clone ile dagitin, ikisi de not eklesin.
-
-// TODO 1e: Rc::strong_count'u uc yerde yazdirin: klonlamadan once, sonra,
-//          ve bir ic blok bitince. Sayacin dustugunu gosterin.
-
-// TODO 1f: `let r = Rc::new(String::from("x")); r.push_str("y");` deneyin.
-//          Hata kodu ne? Rc neden degistirilemez?
-
-// TODO 1g: RefCell kuralini calisma zamaninda kirin:
-//            let c = RefCell::new(0);
-//            let a = c.borrow_mut();
-//            let b = c.borrow_mut();
-//          Ne oldu? Ayni ihlali &mut ile yapsaydiniz ne zaman yakalanirdi?
-//          Sonra ikinci borrow_mut'i try_borrow_mut ile degistirip panigi onleyin.
-
-// ORNEK: birim -> dedektif SAHIPLIK, dedektif -> birim SAHIPLIK YOK
+// ORNEK: birim -> dedektif SAHIPLIK (Rc), dedektif -> birim SAHIPLIK YOK (Weak)
 struct Squad {
     name: String,
     members: RefCell<Vec<Rc<Agent>>>,
@@ -96,97 +84,164 @@ struct Agent {
     squad: RefCell<Weak<Squad>>,
 }
 
-// TODO 1h: Squad ve Agent icin Drop yazip birer satir yazdirin.
-//          Bir Squad ve bir Agent olusturup birbirine baglayin.
-//          Program bitince iki drop da gorunuyor mu?
-//          Sonra Weak yerine Rc koyun: drop ciktilari ne oldu? Neden?
+// GOREV 1h: Squad ve Agent icin Drop yazin, birer satir yazdirsin.
+//   impl Drop for Squad  { fn drop(&mut self) { println!("  [drop] {} kapandi", self.name); } }
+//   impl Drop for Agent  { ... }
 
 fn lab_1_akilli_isaretciler() {
-    println!("-- lab 1: akilli isaretciler --");
-    let clue = Clue::new("limanda gece 02:10'da bir kamyon");
-    println!("  ilk ipucu: {}", clue.text);
-    // TODO: 1b-1h bitince ciktilarinizi buraya ekleyin
+    println!("== LAB 1: akilli isaretciler ==");
+
+    // ORNEK (calisiyor)
+    let clue = Clue::new("otoparktaki bilet");
+    println!("  ilk ipucu   : {}", clue.text);
+    println!("  Box<Clue>   : {} bayt (icindekinin boyutu ne olursa olsun)",
+        size_of::<Box<Clue>>());
+
+    // GOREV 1e: uc ipucu zincirleyip chain() ile yazdirin.
+    //   BEKLENEN: otoparktaki bilet -> plaka kaydi -> gece bekcisi
+
+    // GOREV 1f: su ucunu yazdirin ve ucuncusunun neden Box ile AYNI oldugunu yazin:
+    //   size_of::<[u8; 1024]>() / size_of::<Box<[u8; 1024]>>() / size_of::<Option<Box<Clue>>>()
+    //   BEKLENEN: 1024 / 8 / 8
+
+    // GOREV 1g: let file = Rc::new(CaseFile::new("KRG-12")); olusturun.
+    //   Sayaci DORT yerde yazdirin:
+    //     (1) hemen sonra                                  -> 1
+    //     (2) let alvarez = Rc::clone(&file);  sonrasinda   -> 2
+    //     (3) bir ic blok icinde ucuncu bir klon alip       -> 3
+    //     (4) blok bittikten sonra                          -> 2
+    //   Sonra file ve alvarez ile birer not ekleyip note_count yazdirin.
+    //   BEKLENEN: "KRG-12 dosyasinda 2 not var"
+
+    // HATA DENEYI 1i: Rc icindeki veriyi degistirmeyi deneyin.
+    // let r = Rc::new(String::from("x"));
+    // r.push_str("y");
+    //   Hata kodu: ______   Rc neden degistirilemez?
+
+    // HATA DENEYI 1j: RefCell kuralini CALISMA zamaninda kirin.
+    // let c = RefCell::new(0);
+    // let a = c.borrow_mut();
+    // let b = c.borrow_mut();
+    // println!("{} {}", a, b);
+    //   Derleniyor mu? Calistirinca ne oldu? Mesaj: ______
+    //   Ayni ihlali &mut ile yapsaydiniz ne zaman yakalanirdi?
+    //   Sonra ikinci borrow_mut'i try_borrow_mut ile degistirip panigi onleyin.
+
+    // GOREV 1k: bir Squad ve bir Agent olusturup birbirine baglayin
+    //   (squad.members'a Rc::clone(&agent), agent.squad'a Rc::downgrade(&squad)).
+    //   Rc::strong_count ve Rc::weak_count yazdirin.
+    //   BEKLENEN: strong 1 / weak 1, ve program sonunda IKI drop satiri.
+    //
+    // GOREV 1l: simdi Agent.squad'i Weak yerine RefCell<Option<Rc<Squad>>> yapin,
+    //   ayni baglantiyi kurun. Drop satirlari ne oldu? Neden?
 }
 
 // ===========================================================================
-// LAB 2 - Lifetime: neden var
+// LAB 2 - Lifetime: neden var                                       (Ders 2)
 // ===========================================================================
-// TODO 2a: su fonksiyonu yazmayi deneyin, hata kodunu okuyun:
-//            fn latest_statement() -> &str {
-//                let s = String::from("kamyonun plakasi 34 ile basliyordu");
-//                &s
-//            }
-//          Neden 'a eklemek COZUM DEGIL? Dogru cozumu yazin.
 
-// TODO 2b: `fn longer_one(a: &str, b: &str) -> &str` yazin - derlenmeyecek.
-//          Hata kodunu not edin, sonra 'a ekleyerek derletin.
+// ORNEK: sahiplik donduren surum - hicbir omur sorunu yok.
+fn latest_statement() -> String {
+    String::from("gece bekcisi 23:40 dedi")
+}
 
-// TODO 2c: 2b'deki fonksiyonu su sekilde cagirin:
-//            uzun bir String disarida, kisa bir String ic blokta.
-//            Sonucu blok ICINDE yazdirin  -> calisir
-//            Sonucu blok DISINDA yazdirin -> hata
-//          Hangi hatayi aldiniz? 'a hangi omre esitlendi?
+// HATA DENEYI 2a: ayni fonksiyonu REFERANS donduren hale getirin.
+// fn latest_statement_broken() -> &str {
+//     let s = String::from("gece bekcisi 23:40 dedi");
+//     &s
+// }
+//   Hata kodu: ______
+//   'a eklemek neden COZUM DEGIL? Dogru cozum ne?
 
-// TODO 2d: `fn preferred<'a>(primary: &'a str, _fallback: &str) -> &'a str` yazin.
-//          _fallback neden 'a almadi? Imza okuyana ne soyluyor?
+// GOREV 2b: iki ifadeden uzun olani donduren fonksiyonu yazin.
+//   Once 'a OLMADAN yazip derleyin -> hata kodu: ______
+//   Sonra 'a ekleyip derletin.
+//   fn longer_one<'a>(a: &'a str, b: &'a str) -> &'a str
 
-// TODO 2e: `fn first_word(s: &str) -> &str` yazin - 'a YAZMADAN derlenecek.
-//          Elision'in hangi kurali devrede? 2b neden ayni kuraldan yararlanamiyor?
+// GOREV 2c: donusun SADECE birinci parametreye bagli oldugu bir fonksiyon yazin.
+//   fn preferred<'a>(primary: &'a str, fallback: &str) -> &'a str
+//   fallback neden 'a almadi? Imza okuyana ne soyluyor?
 
-// TODO 2f (NLL): bir Vec'ten `let first = &v[0];` alin, yazdirin, sonra v.push(...) yapin.
-//          Calisiyor. Simdi push'tan SONRA ilk'i tekrar yazdirin. Hata kodu ne?
+// GOREV 2d: elision - 'a YAZMADAN derlenen bir fonksiyon yazin.
+//   fn first_word(s: &str) -> &str          // ilk bosluga kadar olan kisim
+//   BEKLENEN: first_word("plaka kismen okunabiliyor") -> "plaka"
+//   Hangi elision kurali isledi? 2b neden ayni kuraldan yararlanamiyor?
 
 fn lab_2_lifetime() {
-    println!("-- lab 2: lifetime --");
-    // TODO: 2a-2f
+    println!("== LAB 2: lifetime ==");
+    println!("  {}", latest_statement());
+
+    // GOREV 2e: 2b'deki fonksiyonu su sekilde cagirin:
+    //   uzun yasayan bir String disarida, kisa yasayan bir String ic blokta.
+    //   Sonucu once blok ICINDE yazdirin  -> calisir
+    //   sonra blok DISINDA yazdirin       -> hata kodu: ______
+    //   'a hangi omre esitlendi? Disaridaki String hala yasarken bile neden olmuyor?
+
+    // HATA DENEYI 2f: degeri degil REFERANSI ic kapsamdan disari tasiyin.
+    // let outer_ref;
+    // {
+    //     let inner = String::from("gecici tutanak");
+    //     outer_ref = &inner;
+    // }
+    // println!("{}", outer_ref);
+    //   Hata kodu: ______
+
+    // GOREV 2g (NLL): bir Vec olusturun, `let first = &v[0];` alin, yazdirin,
+    //   sonra v.push(...) yapin. Calisiyor.
+    //   Simdi push'tan SONRA first'i tekrar yazdirin -> hata kodu: ______
+    //   Odunc kapsamin sonuna kadar mi surdu, son kullanima kadar mi?
 }
 
 // ===========================================================================
-// LAB 3 - Struct'ta lifetime ve 'static
+// LAB 3 - Struct'ta lifetime ve 'static                             (Ders 3)
 // ===========================================================================
-// ORNEK: tanik ifadesinin tam metni baska yerde duruyor.
+
+// ORNEK: tanik ifadesinin tam metni BASKA yerde duruyor, biz sadece gosteriyoruz.
 struct Statement<'a> {
     source: &'a str,
 }
 
-// TODO 3a: impl<'a> Statement<'a> yazin:
-//            fn new(source: &'a str) -> Statement<'a>
-//            fn first_line(&self) -> &str
-//            fn quote_with(&self, keyword: &str) -> Option<&str>
-//          first_line'da 'a yazmadiniz - hangi elision kurali isledi?
+// GOREV 3a: impl<'a> Statement<'a> yazin:
+//   fn new(source: &'a str) -> Statement<'a>
+//   fn first_line(&self) -> &str                 // ilk satir
+//   fn quote_with(&self, keyword: &str) -> Option<&str>   // keyword gecen ilk satir
+//   Ipucu: self.source.lines()
+//   first_line'da 'a yazmadiniz - hangi elision kurali isledi?
 
-// TODO 3b: Statement'tan lifetime'i SILIN (struct Statement { source: &str }).
-//          Hata kodu ne? Sonra geri koyun.
+// HATA DENEYI 3b: Statement'tan <'a> ve &'a'yi SILIN (struct Statement { source: &str }).
+//   Hata kodu: ______   Sonra geri koyun.
 
-// TODO 3c: size_of::<Statement>() ile kaynak metnin uzunlugunu yan yana yazdirin.
-//          Struct neden metin buyudukce buyumuyor?
+// GOREV 3c: sahiplenen surumu yazin:
+//   struct OwnedStatement { source: String }  + ayni iki metot
+//   Ikisinin size_of'unu yan yana yazdirin.
+//   BEKLENEN: Statement 16 bayt, OwnedStatement 24 bayt
+//   Kaynak metin 10 KB olsaydi hangisi buyurdu?
 
-// TODO 3d: sahiplenen surumu yazin: struct OwnedStatement { source: String }
-//          Ayni iki metodu ekleyin. Iki surumun boyutlarini karsilastirin.
-//          Hangisini kutuphane API'sinde dondururdunuz? Neden?
+// HATA DENEYI 3d: yerel bir String'den Statement uretip DONDURMEYI deneyin.
+// fn build() -> Statement<'static> {
+//     let text = String::from("ifade");
+//     Statement { source: &text }
+// }
+//   Hata kodu: ______   Bu Gun 2'deki hangi soruna denk geliyor?
 
-// TODO 3e: su fonksiyonu yazmayi deneyin:
-//            fn build() -> Statement<'static> {
-//                let text = String::from("ifade");
-//                Statement { source: &text }
-//            }
-//          Hata kodu ne? Bu Gun 2'deki hangi soruna denk geliyor?
-
-// TODO 3f: `fn archive<T: 'static>(x: T) -> T` yazin.
-//          String::from("...") ile cagirin -> calisir.
-//          Yerel bir String'in referansiyla cagirin -> hata.
-//          T: 'static "sonsuza kadar yasar" mi demek? Bir cumleyle yazin.
+// GOREV 3e: fn archive<T: 'static>(x: T) -> T yazin.
+//   archive(String::from("dosya")) -> calisir
+//   yerel bir String'in REFERANSIYLA cagirin -> hata kodu: ______
+//   T: 'static "sonsuza kadar yasar" mi demek? Bir cumleyle yazin.
 
 fn lab_3_struct_omru() {
-    println!("-- lab 3: struct omru --");
+    println!("== LAB 3: struct omru ==");
     let text = String::from("tanik: kamyon lacivertti\nsofor uzun boyluydu");
     let statement = Statement { source: &text };
-    println!("  kaynak {} bayt", statement.source.len());
-    // TODO: 3a-3f
+    println!("  kaynak {} bayt, struct {} bayt",
+        text.len(), size_of::<Statement>());
+
+    // GOREV 3f: 3a'yi bitirince first_line ve quote_with("sofor") ciktilarini yazdirin.
+    //   BEKLENEN: "tanik: kamyon lacivertti" ve Some("sofor uzun boyluydu")
 }
 
 // ===========================================================================
-// LAB 4 - Closure temelleri
+// LAB 4 - Closure temelleri                                         (Ders 4)
 // ===========================================================================
 #[derive(Debug, Clone)]
 struct Tip {
@@ -195,73 +250,109 @@ struct Tip {
     source: String,      // muhbir
 }
 
-// TODO 4a: bir `threshold` degiskeni tanimlayip onu YAKALAYAN bir closure yazin:
-//            let strong = |t: &Tip| t.weight >= threshold;
-//          Ayni seyi `fn` ile yazmayi deneyin. Hata kodu ne? Neden?
+// GOREV 4b: closure alan bir fonksiyon yazin. Neden generic olmak zorunda?
+//   fn filter_tips<F>(tips: &[Tip], rule: F) -> Vec<String>
+//   where F: Fn(&Tip) -> bool
 
-// TODO 4b: `fn filter_tips<F>(tips: &[Tip], rule: F) -> Vec<String> where F: Fn(&Tip) -> bool`
-//          yazin. Neden generic? Iki closure ayni tip midir?
+// GOREV 4c: FnMut alan bir fonksiyon yazin (parametre `mut` olmali):
+//   fn audit<F>(tips: &[Tip], mut record: F) where F: FnMut(&Tip)
 
-// TODO 4c: FnMut ornegi: `fn audit<F>(tips: &[Tip], mut record: F) where F: FnMut(&Tip)`
-//          yazin. Disarida bir sayac ve toplam tutup closure icinde artirin.
-
-// TODO 4d: FnOnce ornegi: bir String'i `move` ile yakalayan ve onu TUKETEN
-//          bir closure yazin. Iki kez cagirmayi deneyin. Hata kodu ne?
-
-// TODO 4e: `move` yakalanan degiskeni tasir. move'lu bir closure'i IKI KEZ
-//          cagirin - calisiyor mu? "move" ile "bir kez cagrilir" ayni sey mi?
-
-// TODO 4f: size_of_val ile uc closure'in boyutunu yazdirin:
-//            hicbir sey yakalamayan / bir u8 yakalayan / bir String yakalayan
-//          Sonuclari closure'in "adsiz struct" olmasiyla aciklayin.
-
-// TODO 4g: `fn count_matching(tips: &[Tip], rule: fn(&Tip) -> bool) -> usize` yazin.
-//          Gercek bir fonksiyon geciriliyor mu? Yakalamayan closure?
-//          Yakalayan closure? Sonuncusunun hata kodunu not edin.
+// GOREV 4g: fn pointer alan bir fonksiyon yazin:
+//   fn count_matching(tips: &[Tip], rule: fn(&Tip) -> bool) -> usize
 
 fn lab_4_closure() {
-    println!("-- lab 4: closure --");
+    println!("== LAB 4: closure ==");
     let tips = vec![
         Tip { text: String::from("kamyon plakasi"), weight: 9, source: String::from("trafik") },
         Tip { text: String::from("isimsiz ihbar"), weight: 3, source: String::from("bilinmiyor") },
         Tip { text: String::from("liman kamerasi"), weight: 8, source: String::from("guvenlik") },
         Tip { text: String::from("kahvehane dedikodusu"), weight: 2, source: String::from("bilinmiyor") },
     ];
-    println!("  {} ipucu var", tips.len());
-    // TODO: 4a-4g
+
+    // ORNEK (calisiyor): closure cevredeki threshold'u YAKALIYOR
+    let threshold = 5;
+    let strong = |t: &Tip| t.weight >= threshold;
+    println!("  esik {} -> {} guclu ipucu", threshold, tips.iter().filter(|t| strong(t)).count());
+
+    // HATA DENEYI 4a: ayni seyi fonksiyonla yapin.
+    // fn strong_fn(t: &Tip) -> bool { t.weight >= threshold }
+    //   Hata kodu: ______   Fonksiyonun cevresi neden yok?
+
+    // GOREV 4d (FnMut): disarida bir sayac ve toplam tutup 4c'deki audit ile doldurun.
+    //   BEKLENEN: "4 ipucu, toplam agirlik 22"
+
+    // GOREV 4e (FnOnce): bir String'i `move` ile yakalayip TUKETEN closure yazin
+    //   (icinde String'i geri dondurun). Iki kez cagirmayi deneyin.
+    //   Hata kodu: ______
+
+    // GOREV 4f: `move`lu bir closure'i IKI KEZ cagirin - calisiyor mu?
+    //   "move" ile "bir kez cagrilir" ayni sey mi? Bir cumleyle yazin.
+
+    // GOREV 4h: uc closure'in boyutunu yazdirin (std::mem::size_of_val):
+    //   hicbir sey yakalamayan / bir u8 yakalayan / bir String yakalayan
+    //   BEKLENEN: 0 / 1 / 24
+    //   Sonucu "closure adsiz bir struct'tir" cumlesiyle aciklayin.
+
+    // HATA DENEYI 4i: 4g'deki fonksiyona YAKALAYAN bir closure gecirin.
+    //   count_matching(&tips, |t| t.weight >= threshold);
+    //   Hata kodu: ______   Yakalamayan closure gecti mi?
 }
 
 // ===========================================================================
-// LAB 5 - Closure'larla calismak
+// LAB 5 - Closure'larla calismak                                    (Ders 5)
 // ===========================================================================
-// TODO 5a: `fn weight_rule(threshold: u8) -> impl Fn(&Tip) -> bool` yazin.
-//          `move` neden zorunlu?
 
-// TODO 5b: `fn pick_rule(mode: &str) -> Box<dyn Fn(&Tip) -> bool>` yazin:
-//          "strict" -> weight >= 8, "loose" -> weight >= 3, digeri -> hepsi.
-//          Ayni seyi -> impl Fn ile YAZMAYI deneyin (closure'lar threshold yakalasin).
-//          Hata kodu ne? Gun 6'da hangi duvara benziyor?
+// GOREV 5a: closure DONDUREN fonksiyon yazin.
+//   fn weight_rule(threshold: u8) -> impl Fn(&Tip) -> bool
+//   `move` neden zorunlu? Kaldirip deneyin.
 
-// TODO 5c: closure'i struct icinde saklayin:
-//            struct Screen<F: Fn(&Tip) -> bool> { name: String, rule: F }
-//          `(self.rule)(t)` yazilisina dikkat - parantezsiz neden olmuyor?
+// GOREV 5b: calisma zamaninda kural secen fonksiyon yazin.
+//   fn pick_rule(mode: &str) -> Box<dyn Fn(&Tip) -> bool>
+//     "strict" -> weight >= 8 | "loose" -> weight >= 3 | digeri -> hepsi true
+//   HATA DENEYI: ayni fonksiyonu -> impl Fn ile yazin (closure'lar threshold YAKALASIN).
+//     Hata kodu: ______   Gun 6'da hangi duvara benziyor?
 
-// TODO 5d: farkli kurallari TEK listede tutun:
-//            struct RuleBook { rules: Vec<(String, Box<dyn Fn(&Tip) -> bool>)> }
-//          En az iki kural ekleyip HEPSINDEN gecen ipuclarini bulun (`all`).
+// GOREV 5c: closure'i struct icinde saklayin.
+//   struct Screen<F: Fn(&Tip) -> bool> { name: String, rule: F }
+//   apply metodunda `(self.rule)(t)` yazin - parantezleri kaldirinca ne oluyor?
 
-// TODO 5e: kombinatorlerle su dort sonucu uretin:
-//            - weight >= 5 olanlarin metinleri (filter + map + collect)
-//            - toplam agirlik (map + sum)
-//            - en guvenilir ipucu (max_by_key)
-//            - agirliga gore azalan sirali liste (sort_by_key + Reverse)
-
-// TODO 5f: `find` ile "plaka" gecen ipucunu bulun (Option doner). Sonra:
-//            map / and_then / filter / unwrap_or_else / ok_or
-//          besini de kullanip ciktilarini yazdirin.
-//          unwrap_or ile unwrap_or_else farki nedir, bir cumleyle yazin.
+// GOREV 5d: farkli kurallari TEK listede tutun.
+//   struct RuleBook { rules: Vec<(String, Box<dyn Fn(&Tip) -> bool>)> }
+//   Su iki kurali ekleyin:
+//     "agirlik >= 3"  -> |t| t.weight >= 3
+//     "muhbir belli"  -> |t| t.source != "bilinmiyor"
+//   HEPSINDEN gecenleri bulun (rules.iter().all(...)).
+//   BEKLENEN: ["kamyon plakasi", "liman kamerasi"]
 
 fn lab_5_kural_motoru() {
-    println!("-- lab 5: kural motoru --");
-    // TODO: 5a-5f
+    println!("== LAB 5: kural motoru ==");
+    let tips = vec![
+        Tip { text: String::from("kamyon plakasi"), weight: 9, source: String::from("trafik") },
+        Tip { text: String::from("isimsiz ihbar"), weight: 3, source: String::from("bilinmiyor") },
+        Tip { text: String::from("liman kamerasi"), weight: 8, source: String::from("guvenlik") },
+        Tip { text: String::from("kahvehane dedikodusu"), weight: 2, source: String::from("bilinmiyor") },
+    ];
+
+    // ORNEK (calisiyor): tembellik. Adaptor kurulunca HICBIR SEY yazilmiyor.
+    let zincir = tips.iter().map(|t| {
+        println!("    >> {} isleniyor", t.text);
+        t.weight
+    });
+    println!("  zincir kuruldu - yukarida satir var mi?");
+    let toplam: u32 = zincir.map(|w| w as u32).sum();
+    println!("  sum() cagrildi -> toplam {}", toplam);
+
+    // GOREV 5e: kombinatorlerle su dort sonucu uretin:
+    //   - weight >= 5 olanlarin metinleri        (filter + map + collect)
+    //   - toplam agirlik                          (map + sum)   BEKLENEN: 22
+    //   - en guvenilir ipucu                      (max_by_key)  BEKLENEN: "kamyon plakasi"
+    //   - agirliga gore azalan liste              (sort_by_key + std::cmp::Reverse)
+
+    // GOREV 5f: fold ile toplam agirligi TEKRAR hesaplayin.
+    //   fold(0, |acc, t| ...) BEKLENEN: 22 - sum ile ayni.
+    //   fold ile reduce farki nedir?
+
+    // GOREV 5g: find ile "plaka" gecen ipucunu bulun (Option doner), sonra
+    //   map / and_then / filter / unwrap_or_else / ok_or besini de kullanin.
+    //   unwrap_or ile unwrap_or_else farkini bir cumleyle yazin.
 }

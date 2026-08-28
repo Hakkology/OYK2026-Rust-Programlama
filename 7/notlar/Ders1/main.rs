@@ -4,7 +4,7 @@
 // Dunya: gece vardiyasi dedektiflik burosu.
 // Dosyalar, ipucu zincirleri, ayni dosyaya bakan birden cok dedektif.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::mem::size_of;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
@@ -12,11 +12,9 @@ use std::rc::{Rc, Weak};
 // ---------------------------------------------------------------
 // 1) BOX - SEBEP 1: OZYINELEMELI TIP
 // ---------------------------------------------------------------
-// Her ipucu bir sonrakine goturuyor. Box olmadan:
-//   struct Lead { note: String, next: Option<Lead> }
-//   E0072: recursive type `Lead` has infinite size
-// Cunku derleyici boyutu hesaplarken sonsuz donguye giriyor:
-//   Lead = String + Lead = String + String + Lead = ...
+// Her ipucu bir sonrakine goturuyor. Box'siz:
+//   next: Option<Lead>  ->  E0072: recursive type has infinite size
+//   (boyut hesabi sonsuza gidiyor: Lead = String + Lead = ...)
 struct Lead {
     note: String,
     next: Option<Box<Lead>>,
@@ -116,6 +114,29 @@ impl Drop for Detective {
     }
 }
 
+// AYNI YAPI, geri baglanti Weak yerine Rc: DONGU olusuyor.
+struct LeakyDept {
+    name: String,
+    members: RefCell<Vec<Rc<LeakyAgent>>>,
+}
+
+struct LeakyAgent {
+    name: String,
+    dept: RefCell<Option<Rc<LeakyDept>>>,     // Weak DEGIL -> sahiplik
+}
+
+impl Drop for LeakyDept {
+    fn drop(&mut self) {
+        println!("    [drop] {} birimi kapandi", self.name);
+    }
+}
+
+impl Drop for LeakyAgent {
+    fn drop(&mut self) {
+        println!("    [drop] {} evine gitti", self.name);
+    }
+}
+
 fn main() {
     println!("-- 1) Box: ozyinelemeli ipucu zinciri --");
     let chain = Lead {
@@ -131,8 +152,7 @@ fn main() {
     // Box her zaman tek bir pointer: icindeki ne olursa olsun 8 bayt.
     println!("  [u8; 4096]        {:>5} bayt", size_of::<[u8; 4096]>());
     println!("  Box<[u8; 4096]>   {:>5} bayt", size_of::<Box<[u8; 4096]>>());
-    // Gun 4'teki niche optimization: Option<Box<T>> ekstra yer kaplamiyor,
-    // cunku Box asla null olamaz - o bosluk None icin kullaniliyor.
+    // Box asla null olamaz; o bosluk None icin kullaniliyor (Gun 4: niche).
     println!("  Option<Box<Lead>> {:>5} bayt", size_of::<Option<Box<Lead>>>());
 
     println!("-- 3) Deref ve deref coercion --");
@@ -184,6 +204,14 @@ fn main() {
     // try_borrow_mut yerine borrow_mut yazsaydik program PANIC ederdi.
     // &mut olsaydi ayni hatayi DERLEME zamaninda alirdik (E0499).
 
+    println!("-- 6c) Cell: RefCell'in ucuz kardesi --");
+    // Cell odunc saymaz, degeri kopyalar: panic riski yok, ama Copy tipler icin.
+    let ziyaret = Cell::new(0u32);
+    ziyaret.set(ziyaret.get() + 1);
+    ziyaret.set(ziyaret.get() + 1);
+    println!("  Cell sayac: {} (borrow yok, panic riski yok)", ziyaret.get());
+    println!("  Cell: get/set ile deger kopyalar | RefCell: borrow ile REFERANS verir");
+
     println!("-- 7) Weak: dongu kurmadan geri baglanti --");
     let department = Rc::new(Department {
         name: String::from("Cinayet Masasi"),
@@ -204,4 +232,25 @@ fn main() {
         None => println!("  birim kapanmis"),
     }
     println!("  program bitiyor, drop ciktilari:");
+    drop(alvarez);
+    drop(department);
+
+    println!("-- 7b) ayni yapi Rc ile: SIZINTI --");
+    {
+        let dept = Rc::new(LeakyDept {
+            name: String::from("Kacakcilik Masasi"),
+            members: RefCell::new(Vec::new()),
+        });
+        let agent = Rc::new(LeakyAgent {
+            name: String::from("Kaya"),
+            dept: RefCell::new(None),
+        });
+        dept.members.borrow_mut().push(Rc::clone(&agent));      // asagi: Rc
+        *agent.dept.borrow_mut() = Some(Rc::clone(&dept));      // yukari: Rc  <- DONGU
+        println!("    sayaclar: birim {} / dedektif {}",
+            Rc::strong_count(&dept), Rc::strong_count(&agent));
+    }
+    println!("    blok bitti - YUKARIDA HIC DROP SATIRI YOK.");
+    println!("    Ikisi birbirini tutuyor, sayaclar sifira inmedi: bellek sizdi.");
+    println!("    Weak surumunde (7) iki drop da calismisti. Fark tek satir.");
 }

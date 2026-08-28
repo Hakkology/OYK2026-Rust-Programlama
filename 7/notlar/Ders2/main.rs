@@ -15,11 +15,10 @@
 // ---------------------------------------------------------------
 // fn latest_note_broken() -> &str {
 //     let note = String::from("gece bekcisi 23:40 dedi");
-//     &note                                    // note fonksiyon bitince dusuyor
+//     &note
 // }
-//   E0106: missing lifetime specifier
-//   -> "bu referans nereden geliyor?" Girdi yok, cevap yok.
-//   Cozum: sahipligi dondurun (String), referans degil.
+//   E0106: referans girdisi yok -> donen neye baglanacak belli degil.
+//   Cozum 'a eklemek degil, sahipligi dondurmek.
 fn latest_note() -> String {
     String::from("gece bekcisi 23:40 dedi")
 }
@@ -27,16 +26,13 @@ fn latest_note() -> String {
 // ---------------------------------------------------------------
 // 3) IKI GIRDI, HANGISI DONUYOR?
 // ---------------------------------------------------------------
-// fn longer_statement(a: &str, b: &str) -> &str      // E0106
-// Derleyici donen referansin a'dan mi b'den mi geldigini bilmiyor.
-// 'a yazinca "ikisinin de en az bu kadar yasadigini" soylemis oluyoruz;
-// donen referans da o kadar yasar - yani KISA olani kadar.
+// fn longer_statement(a: &str, b: &str) -> &str   ->  E0106
+// 'a demek: donen referans, iki girdinin KISA olani kadar yasar.
 fn longer_statement<'a>(a: &'a str, b: &'a str) -> &'a str {
     if a.len() >= b.len() { a } else { b }
 }
 
-// Donus TEK bir girdiye baglanabilir. O zaman digerinin omru onemsizdir:
-// dikkat: _fallback'e 'a yazmadik, cunku donmuyor.
+// Donus tek girdiye baglanabilir; _fallback donmedigi icin 'a almadi.
 fn preferred<'a>(primary: &'a str, _fallback: &str) -> &'a str {
     primary
 }
@@ -60,6 +56,13 @@ fn first_word_explicit<'a>(s: &'a str) -> &'a str {
     }
 }
 
+// ---------------------------------------------------------------
+// 6) SOMUT OMUR: sahiplik devri omru BITIRIR
+// ---------------------------------------------------------------
+fn file_away(s: String) {
+    println!("  arsive kaldirildi: {}", s);
+}   // s burada dusuyor - omru fonksiyonun sonunda bitti
+
 fn main() {
     println!("-- 1) somut omur --");
     let statement = String::from("kirmizi bir araba hizla gecti");
@@ -81,8 +84,27 @@ fn main() {
     //     outer_ref = &inner;
     // }
     // println!("{}", outer_ref);
-    //   E0597: `inner` does not live long enough
-    //   inner blok bitince dustu; outer_ref onu gostermeye devam edemez.
+    //   E0597: inner blok bitince dustu, outer_ref onu gosteremez.
+
+    println!("-- 1b) omru bitiren uc yol --");
+    // (a) kapsam bitti
+    {
+        let temp = String::from("gecici tutanak");
+        println!("  kapsam icinde: {}", temp);
+    }   // temp dustu
+
+    // (b) baska bir binding'e TASINDI
+    let original = String::from("ilk tutanak");
+    let moved = original;
+    println!("  tasindi: {}", moved);
+    // println!("{}", original);
+    //   E0382: borrow of moved value - original'in omru tasima satirinda bitti
+
+    // (c) fonksiyona DEGERLE gecildi
+    let report = String::from("gunluk rapor");
+    file_away(report);
+    // println!("{}", report);
+    //   E0382: omru cagri satirinda bitti, fonksiyon icinde dustu
 
     println!("-- 2) sarkan referans yerine sahiplik --");
     println!("  {}", latest_note());
@@ -102,8 +124,7 @@ fn main() {
         println!("  blok icinde kullanmak serbest: {}", winner);
     }
     // println!("{}", winner);
-    //   E0597: `short_lived` does not live long enough
-    //   'a ikisinin KISA olanina esitlendi; blok bitince winner de gecersiz.
+    //   E0597: 'a KISA olana esitlendi; blok bitince winner de gecersiz.
 
     println!("-- 4) elision --");
     let report = String::from("plaka kismen okunabiliyor");
