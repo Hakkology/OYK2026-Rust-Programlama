@@ -193,3 +193,28 @@ sorun çıkmaz:
 
 Açık yazmamızın sebebi ikisinin **ayrı** ömürler olduğunun görülmesi; elision bu imzayı
 zaten böyle çıkarırdı.
+
+```rust
+struct Bookmark<'a> {
+    text: &'a str,
+}
+
+fn main() {
+    let bookmark;
+    {
+        let temp_book = String::from("Rust Programlama");
+        bookmark = Bookmark { text: &temp_book };
+    }
+    println!("{}", bookmark.text);
+}
+
+struct Bookmark<'a> {
+    text: &'a str,
+}
+
+fn main() {
+    let book = String::from("Rust Programlama");
+    let bookmark = Bookmark { text: &book[..4] };
+    println!("{}", bookmark.text);
+}
+```
