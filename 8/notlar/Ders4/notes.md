@@ -1,16 +1,18 @@
 # Gün 8 · Ders 4 — `async` / `await`
 
-Bir şef fırındaki böreği beklerken elini bağlı tutmaz; gidip salatayı hazırlar.
-Async'in tek cümlelik özeti bu: **bloklamak yerine sıraya girmek.**
+Hacker şifrenin çözülmesini beklerken elini bağlı tutmaz; o sırada kamerayı da kırmaya
+başlar. Async'in tek cümlelik özeti bu: **bloklamak yerine sıraya girmek.**
 
+> Gereken sürüm: **rustc 1.85+** (`Waker::noop` orada stabil oldu). `rustup update`.
+>
 > Bu dersin `main.rs`'i hiçbir crate kullanmıyor. Sebebi önemli: **`async`/`await` dilin
 > parçası, runtime değil.** Runtime'ı burada kendimiz yazıyoruz ki ne yaptığı görünsün.
 > Gerçek projede `tokio` kullanacaksınız; karşılıkları aşağıda.
 
 ## Neden var
 
-10.000 eşzamanlı bağlantı için 10.000 thread açamazsınız: her thread'in ~8 MB stack'i
-var, 10.000 × 8 MB = 80 GB. Bir async **task** birkaç yüz bayt.
+10.000 eşzamanlı bağlantı için 10.000 thread açamazsınız: Rust'ın açtığı her thread
+varsayılan **2 MiB** stack ayırır, 10.000 × 2 MiB = 20 GB. Bir async **task** birkaç yüz bayt.
 
 | iş türü | araç |
 |---|---|
@@ -22,8 +24,8 @@ Ayrım şu: thread **hesap** için, async **bekleme** için. Beklerken thread tu
 ## Future tembeldir
 
 ```rust
-let is = prepare("borek", 50);       // hiçbir şey çalışmadı
-println!("async fn cagrildi, firin CALISMIYOR");
+let is = breach("kamera agi", 50);   // hiçbir şey çalışmadı
+println!("async fn cagrildi, KIRMA BASLAMADI");
 println!("{}", block_on(is));        // iş ancak şimdi başlıyor
 ```
 
@@ -34,6 +36,8 @@ edilene ya da bir runtime'a verilene kadar tek satır işlemez.
 > sınıfın en çok şaşırdığı yer burası.
 
 ## Runtime dediğimiz şey
+
+> Aşağıdaki kod `main.rs`'in ALTYAPI bölümünden. Fikri görün, ezberlemeyin.
 
 ```rust
 fn block_on<F: Future>(future: F) -> F::Output {
@@ -60,25 +64,32 @@ Rust runtime'ı dile koymadı ki gömülü sistemlerde de çalışsın. Go'nun r
 içinde ve zorunludur — karşılaştırın: Rust size seçim bırakıyor, bedeli seçmek zorunda
 olmanız.
 
-## Elle yazılmış bir `Future`
+## `async fn` aslında ne oluyor
+
+Derleyici `async fn`'i bir **durum makinesine** çevirir: her `.await` bir duraklama
+noktası, aradaki yerel değişkenler o makinenin alanları. Gün 7'de closure için
+söylediğimizin aynısı — "adsız bir struct".
+
+Bu makineyi kimin çalıştıracağı ayrı bir mesele; onu bir sonraki başlıkta gördük.
+
+> `main.rs`'in altında **ALTYAPI** diye işaretli bir bölüm var: `block_on`, `Ice` ve
+> `JoinAll` orada. Onlar runtime taklidi — gerçek projede `tokio` yapıyor.
+> Okumanız gerekmiyor, dersin konusu değil.
+
+### Oradaki `Pin` ne?
+
+Altyapı koduna bakarsanız `poll`'un imzasında görürsünüz:
 
 ```rust
-impl Future for Oven {
-    type Output = String;
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<String> {
-        if Instant::now() >= self.ready_at {
-            Poll::Ready(format!("{} hazir", self.dish))
-        } else {
-            cx.waker().wake_by_ref();     // "beni tekrar yokla"
-            Poll::Pending
-        }
-    }
-}
+fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<String>
 ```
 
-`async fn` yazdığınızda derleyici tam olarak böyle bir durum makinesi üretir: her
-`.await` bir duraklama noktası, aradaki değişkenler o makinenin alanları. Gün 7'de
-closure için söylediğimizin aynısı — "adsız bir struct".
+Tek cümlelik cevap: **durum makinesi kendi içine referans tutabilir**, o yüzden bellekte
+taşınmaması gerekir. `Pin<&mut T>` bu sözün tip sistemindeki karşılığı: "bu değer artık
+taşınmayacak."
+
+`.await` yazarken `Pin` yazmazsınız; yalnızca elle `Future` implemente ederken çıkar.
+Kampta buna girmiyoruz.
 
 ## Can alıcı ölçüm
 
@@ -91,11 +102,11 @@ Aynı sayıda `.await`, üçte bir süre, **tek thread'de**. Farkı yapan şey:
 
 ```rust
 // sırayla: her .await bir öncekini bekliyor
-let a = prepare("borek", 100).await;
-let b = prepare("salata", 100).await;
+let a = breach("kamera agi", 100).await;
+let b = breach("kapi kilidi", 100).await;
 
 // join: hepsi aynı anda ilerliyor
-JoinAll::new(vec![Box::pin(prepare("borek", 100)), ...]).await
+JoinAll::new(vec![Box::pin(breach("kamera agi", 100)), ...]).await
 ```
 
 `JoinAll`'un yaptığı iş `main.rs`'te açık: hepsini sırayla `poll` et, biri bitmişse
@@ -127,7 +138,7 @@ async fn main() {
 |---|---|
 | `block_on(fut)` | `#[tokio::main]` ya da `Runtime::block_on` |
 | `JoinAll` | `tokio::join!` / `futures::future::join_all` |
-| `Oven` (zamanlayıcı) | `tokio::time::sleep` |
+| `Ice` (zamanlayıcı) | `tokio::time::sleep` |
 | — | `tokio::spawn` (task'ı runtime'a bırak) |
 
 ## Üç tuzak

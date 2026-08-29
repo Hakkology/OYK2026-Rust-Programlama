@@ -1,7 +1,7 @@
 # Gün 8 · Ders 2 — `Arc`, `Mutex` ve Paylaşılan Durum
 
-Mutfakta ortak kiler var: dört şef aynı anda stok düşüyor. Gün 7'de öğrendiğimiz tablonun
-**sağ sütunu** bugün doluyor.
+Kuledeki kasa **tek**: dört ekip üyesi aynı anda kredi çekiyor. Gün 7'de öğrendiğimiz
+tablonun **sağ sütunu** bugün doluyor.
 
 | tek thread | çoklu thread |
 |---|---|
@@ -30,22 +30,22 @@ yavaştır; std ikisini ayrı tip tutar ki tek thread'de bedelini ödemeyesiniz.
 ## `Arc<Mutex<T>>`
 
 ```rust
-let pantry = Arc::new(Mutex::new(Pantry { tomatoes: 100, served: 0 }));
+let vault = Arc::new(Mutex::new(Vault { credits: 100, hauls: 0 }));
 
-for sef in 1..=4 {
-    let ortak = Arc::clone(&pantry);        // sayaç artıyor, veri kopyalanmıyor
+for uye in 1..=4 {
+    let ortak = Arc::clone(&vault);         // sayaç artıyor, veri kopyalanmıyor
     thread::spawn(move || {
-        let mut kiler = ortak.lock().unwrap();   // KİLİT alındı
-        kiler.tomatoes -= 1;
+        let mut kasa = ortak.lock().unwrap();    // KİLİT alındı
+        kasa.credits -= 1;
     });                                          // guard düştü -> kilit bırakıldı
 }
 ```
 
 ```
-kalan domates: 60 | cikan tabak: 40
+kasada kalan: 60 kredi | toplam cekim: 40
 ```
 
-Dört şef × 10 tabak = 40, ve sayı **her çalıştırmada aynı**. `Mutex` olmasaydı bu bir
+Dört üye × 10 çekim = 40, ve sayı **her çalıştırmada aynı**. `Mutex` olmasaydı bu bir
 veri yarışı olurdu — ve Rust onu zaten derletmezdi.
 
 İş bölümü net: **`Arc` paylaştırır, `Mutex` sıraya sokar.** İkisi ayrı sorun çözüyor.
@@ -57,7 +57,7 @@ veri yarışı olurdu — ve Rust onu zaten derletmezdi.
 ```rust
 {
     let mut kayit = log.lock().unwrap();
-    kayit.push(...);
+    kayit.push(String::from("giris 02:14"));
 }                       // kapsam bitti -> kilit bırakıldı
 
 let mut kayit = log.lock().unwrap();
@@ -72,8 +72,8 @@ klasik bir bug kaynağıdır; burada dilin kendisi engelliyor.
 Hesabı kilidin **içinde** yaparsanız paralellik kalmaz; herkes sırayla çalışır:
 
 ```
-kilit icinde hesap     49.7ms  (sonuc 18000006000000)
-kilit disinda hesap    12.5ms  (sonuc 18000006000000)
+kilit icinde kirma    147.2ms  (sonuc 18000006000000)
+kilit disinda kirma    36.4ms  (sonuc 18000006000000)
 ```
 
 Aynı sonuç, dört kat fark. **Kural: kilit yalnızca paylaşılan veriye dokunduğunuz an
@@ -84,8 +84,8 @@ tutulmalı.** Hesabı önce yapın, kilidi sonra alın.
 `Mutex` okuyucuları da sıraya sokar. Veri çoğunlukla okunuyorsa `RwLock` daha uygun:
 
 ```rust
-let okunan = menu.read().unwrap();     // üçü de aynı anda okuyabilir
-menu.write().unwrap().push(...);       // yazarken kimse okuyamaz
+let okunan = plan.read().unwrap();     // üçü de aynı anda okuyabilir
+plan.write().unwrap().push(...);       // yazarken kimse okuyamaz
 ```
 
 Bu, Gün 2'deki ödünç kuralının aynısı: ya çok okuyucu ya tek yazıcı. Fark, kuralın
@@ -96,7 +96,7 @@ Bu, Gün 2'deki ödünç kuralının aynısı: ya çok okuyucu ya tek yazıcı. 
 ```rust
 thread::spawn(move || {
     let _g = kopya.lock().unwrap();
-    panic!("sef bicagi dusurdu");
+    panic!("uye yakalandi");
 }).join();
 ```
 

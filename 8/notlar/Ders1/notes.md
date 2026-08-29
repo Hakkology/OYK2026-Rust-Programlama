@@ -1,6 +1,10 @@
 # Gün 8 · Ders 1 — Thread'ler ve Sahiplik
 
-Dünya: gece servisi mutfağı. Şefler aynı anda çalışıyor, siparişler birikiyor, kiler ortak.
+Dünya: 2087, Neo-İzmir. Bir soygun ekibi Ariva Kulesi'ne giriyor — hacker güvenliği kırıyor, sürücü motoru çalıştırıyor, kasacı kapıyı açıyor. Hepsi **aynı anda**.
+
+> Bu dersin ilk 15 dakikası sunumdur: `8/slides/Eszamanlilik-Thread-Ownership.pptx`
+> (eşzamanlılık nedir, thread nedir, Rust nasıl uyguluyor, ownership ne oluyor).
+> Aşağısı sunumdan sonraki kod seansı.
 
 Bugünün konusu **eşzamanlılık**, ama aslında dün öğrendiğimiz iki şeyin uygulaması:
 `move` closure (Ders 4) ve paylaşılan sahiplik (Ders 1). Rust'ın eşzamanlılıkta güvenli
@@ -24,24 +28,46 @@ let sonuc = handle.join().unwrap();  // bitmesini bekle + değeri al
 Çıktının sırası **garanti değildir** — iki thread bağımsız ilerler:
 
 ```
-  [salon] 1. masa siparis verdi
-    [sef] 1. tabak hazir
-    [sef] 2. tabak hazir
-  [salon] 2. masa siparis verdi
+  [merkez] 1. kamera devre disi
+    [hacker] 1. guvenlik katmani kirildi
+    [hacker] 2. guvenlik katmani kirildi
+  [merkez] 2. kamera devre disi
 ```
+
+## `join()` bir `Result` döndürür
+
+Thread panikleyebilir. Panik o thread'i öldürür ama **programı öldürmez**; `join()` size
+bunu `Err` olarak bildirir:
+
+```rust
+let riskli = thread::spawn(|| panic!("uye yakalandi"));
+
+match riskli.join() {
+    Ok(_)  => println!("gorev tamam"),
+    Err(_) => println!("thread PANIKLEDI -> join Err dondu, main devam ediyor"),
+}
+```
+
+```
+thread PANIKLEDI -> join Err dondu, main devam ediyor
+```
+
+`unwrap()` yazsaydık main de panikleyecekti. Örneklerde kısalık için `unwrap()`
+kullanıyoruz; **gerçek kodda `match`**. Gün 5'teki kural burada da geçerli: `unwrap`
+"burada hata olamaz" demektir, ve thread'lerde bunu söyleyemezsiniz.
 
 ## `move` neden zorunlu
 
 ```rust
-let siparis = vec![String::from("mercimek corbasi")];
-thread::spawn(|| println!("{:?}", siparis));
+let ekipman = vec![String::from("EMP granati")];
+thread::spawn(|| println!("{:?}", ekipman));
 ```
 
 ```
-error[E0373]: closure may outlive the current function, but it borrows `siparis`
+error[E0373]: closure may outlive the current function, but it borrows `ekipman`
 ```
 
-Derleyici thread'in ne kadar yaşayacağını **bilmiyor**. `siparis` `main`'de düşebilir,
+Derleyici thread'in ne kadar yaşayacağını **bilmiyor**. `ekipman` `main`'de düşebilir,
 thread hâlâ çalışıyor olabilir → sarkan referans.
 
 > **Bu Gün 2'nin doğrudan sonucu.** C'de bu kod derlenir ve rastgele çöker; Rust'ta
@@ -51,8 +77,8 @@ thread hâlâ çalışıyor olabilir → sarkan referans.
 Çözüm `move`:
 
 ```rust
-let h = thread::spawn(move || { ...siparis... });
-println!("{:?}", siparis);        // E0382: thread'e taşındı
+let h = thread::spawn(move || { ...ekipman... });
+println!("{:?}", ekipman);        // E0382: thread'e taşındı
 ```
 
 ## `thread::scope` — taşımadan ödünç almak
@@ -62,19 +88,19 @@ thread onu **okusun**. `scope` bunu mümkün kılar, çünkü scope içindeki th
 bitmeden **önce** biter — dolayısıyla sarkma ihtimali yok.
 
 ```rust
-let stok: Vec<u32> = (1..=100).collect();
-let (sol, sag) = stok.split_at(50);
+let kasa: Vec<u32> = (1..=100).collect();
+let (sol, sag) = kasa.split_at(50);
 let toplam = thread::scope(|s| {
     let a = s.spawn(|| sol.iter().sum::<u32>());     // ödünç alıyor, taşımıyor
     let b = s.spawn(|| sag.iter().sum::<u32>());
     a.join().unwrap() + b.join().unwrap()
 });
-println!("{}", stok.len());                          // hâlâ kullanılabilir
+println!("{}", kasa.len());                          // hâlâ kullanılabilir
 ```
 
 ```
-paralel toplam: 5050
-stok hala kullanilabilir: 100 kalem
+paralel sayim: 5050 kredi
+kasa hala elimizde: 100 deste
 ```
 
 Rust 1.63'te stabilize oldu; öncesinde `crossbeam` crate'i gerekiyordu.

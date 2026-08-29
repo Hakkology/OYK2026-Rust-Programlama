@@ -1,6 +1,7 @@
 # Gün 8 · Ders 5 — Tek Yönlü Bağlı Liste
 
-Mutfağın sipariş rayı: yeni fiş **en öne** asılır, şef en öndekini alır. Yani LIFO.
+Ekibin çanta destesi: son atılan çanta **en üste** gelir, kaçarken de en üstteki önce
+alınır. Yani LIFO.
 
 Bu ders yeni bir konu değil; **kampın toplamı**. Tek bir veri yapısında şunların hepsi
 buluşuyor:
@@ -21,7 +22,7 @@ type Link<T> = Option<Box<Node<T>>>;      // okunaklılık için takma ad
 
 struct Node<T> { elem: T, next: Link<T> }
 
-pub struct TicketRail<T> { head: Link<T>, len: usize }
+pub struct Stash<T> { head: Link<T>, len: usize }
 ```
 
 Üç karar var, üçü de bilinçli:
@@ -113,7 +114,7 @@ toplam 3030 | en buyuk Some(3000) | uzunluk 3
 15'ten buyukler: [3000, 20]
 ```
 
-`TicketRail`'in kendisi de `Iterator` — o sürüm **tüketir** (`next` = `pop`).
+`Stash`'in kendisi de `Iterator` — o sürüm **tüketir** (`next` = `pop`).
 
 ## `Drop` — sessiz bir tuzak
 
@@ -129,7 +130,7 @@ fatal runtime error: stack overflow, aborting
 İteratif sürüm sorunu bitirir:
 
 ```rust
-impl<T> Drop for TicketRail<T> {
+impl<T> Drop for Stash<T> {
     fn drop(&mut self) {
         let mut simdiki = self.head.take();
         while let Some(mut dugum) = simdiki {

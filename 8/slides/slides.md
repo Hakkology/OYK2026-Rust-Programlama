@@ -1,202 +1,427 @@
-# Gun 8 - Ders 4: Donanim, Cache ve Eszamanlilik
+# Gun 8 - Ders 1: Eszamanlilik, Thread ve Ownership
 
-15:55-17:00 blogunun ilk 15 dakikasi - sunum, sonra kod
+Ders 1 blogunun ilk 20 dakikasi - sunum, sonra kod
 
-> `Donanim-Cache-Eszamanlilik.pptx` dosyasinin markdown aynasi. Sunum her uretildiginde
-> bu dosya da yeniden yaziliyor; duzenlemeyi sunum kaynagindan yapin.
-
----
-
-### 1 - Donanım, Cache ve Eşzamanlılık
-
-*GÜN 8 · DERS 4 · 15 DK*
-
-Thread yazmadan önce: altta gerçekte ne oluyor?
-
-> **Konusmaci notu.** Gün 2'de bellek haritasını çizmiştik. Bugün o haritanın üstüne işlemciyi koyuyoruz — çünkü eşzamanlılığın zor olmasının sebebi donanımda.
+> `Eszamanlilik-Thread-Ownership.pptx` dosyasinin markdown aynasi.
+> Duzenlemeyi sunum kaynagindan yapin: `OYK2026-plan/slides/uret_gun8.py`
 
 ---
 
-### 2 - İşlemci hızlandı. Bellek aynı hızda hızlanmadı.
+### 1 - GÜN 8 · DERS 1 · 20 DK
 
-Aradaki uçurum kapanmadı, büyüdü.
-Modern bir CPU zamanının çoğunu bekleyerek geçiriyor.
+Eşzamanlılık, Thread ve Ownership
 
-> **Konusmaci notu.** Buna 'memory wall' deniyor. 1980'lerde CPU ve RAM benzer hızdaydı; bugün arada iki kat büyüklük mertebesi fark var. Cache hiyerarşisi bu uçurumu kapatmak için icat edildi — bir çözüm değil, bir yama.
+Bilgisayarınızda 431 program çalışıyor. Çekirdek sayısı 16.
 
----
-
-### 3 - Bellek hiyerarşisi
-
-*Yukarı çıktıkça hızlı ve küçük, aşağı indikçe yavaş ve büyük*
-
-| Katman | Gecikme | Boyut | Nerede |
-|---|---|---|---|
-| Register | ~0 | birkaç yüz byte | çekirdeğin içinde |
-| L1 cache | ~1 ns | 32–64 KB | her çekirdeğe özel |
-| L2 cache | ~4 ns | 256 KB – 1 MB | genelde çekirdeğe özel |
-| L3 cache | ~15 ns | 8–32 MB | çekirdekler ARASINDA paylaşılır |
-| RAM | ~80–100 ns | GB'lar | anakartta |
-| NVMe SSD | ~50–100 µs | TB'lar | diskte |
-| HDD | ~10 ms | TB'lar | diskte, dönen tabak |
-
-> **Konusmaci notu.** Sayılar KABACA — işlemciye göre değişir, mertebe doğru. Vurgulanacak nokta: L1'den RAM'e inerken 100 kat, RAM'den SSD'ye inerken 1000 kat yavaşlıyorsunuz. Bu tablo tahtada dursun.
+> **Konusmaci notu.** Baslarken bu celiskiyi sorun: 431 program, 16 cekirdek. Nasil oluyor? Cevap bu 20 dakikanin tamami.
 
 ---
 
-### 4 - L1'den bir veri okumak 1 saniye sürseydi...
+### 2 - Şu anda bu makinede
 
-L2: 4 saniye · L3: 15 saniye · RAM: 1,5 dakika
-SSD: bir gün · Disk: dört ay
-
-> **Konusmaci notu.** İnsan ölçeğine çevirmek sayıları hissedilir yapıyor. Söylenecek cümle: 'RAM'e gitmek, L1'e gitmenin yanında bir öğle molası vermek gibi.' Bu yüzden veriyi cache'te tutmak bir optimizasyon değil, performansın kendisi.
-
----
-
-### 5 - Cache satırı: 64 byte
-
-*Bir byte isteyin, 64 byte gelsin*
+ps ile sayıldı
 
 ```
-let x = dizi[0];    // 1 byte istediniz
+$ nproc                        ->    16   cekirdek
+$ ps -e --no-headers | wc -l   ->   431   surec (process)
+$ ps -eLf --no-headers | wc -l ->  1870   thread
 
-  RAM'den gelen:  [ dizi[0] dizi[1] ... dizi[63] ]   64 byte
-                  <------- tek bir cache satiri ------>
-
-  dizi[1] artik BEDAVA - zaten L1'de
-  dizi[64] ise yeni bir satir demek - yine ~100 ns
-
-Donanim tek byte tasimaz. Hep satir tasir.
+16 cekirdek, 1870 yurutme akisi.
+Ayni anda en fazla 16 tanesi GERCEKTEN calisabilir.
+Peki digerleri?
 ```
 
-**Sonuç: komşu veriye erişmek neredeyse bedava, uzağa atlamak pahalı.**
+Cevap: hiçbiri sürekli çalışmıyor. İşletim sistemi hepsini sırayla, çok hızlı değiştiriyor.
 
-> **Konusmaci notu.** Buna 'spatial locality' deniyor — mekânsal yerellik. Bir de 'temporal locality' var: az önce kullandığınız veri muhtemelen hâlâ cache'te. İki ilke de aynı şeyi söylüyor: veriyi bir arada tut, bir arada kullan.
+> **Konusmaci notu.** Sinifin kendi makinesinde denemesini isteyin, sayilar benzer cikar. Bu slayt gunun butun sorusunu ortaya koyuyor: paylasilan az sayida cekirdek, cok sayida is.
 
 ---
 
-### 6 - Aynı iş, on kat fark
+### 3 - İki kelime, iki ayrı soru
 
-*İki döngü, aynı sayıda toplama*
+gün boyu bu ayrımı koruyacağız
 
-```
-// (a) satir satir - HIZLI
-for i in 0..n {
-    for j in 0..n { toplam += m[i][j]; }   // komsu adresler
-}
+EŞZAMANLILIK (concurrency)
 
-// (b) sutun sutun - YAVAS
-for j in 0..n {
-    for i in 0..n { toplam += m[i][j]; }   // her adimda n*4 byte atla
-}
+PARALELLİK (parallelism)
 
-Ayni islem sayisi. Buyuk matriste (b) 5-10 kat yavas.
-```
+Birden çok işi AYNI DÖNEMDE
 
-**Algoritma aynı, BigO aynı. Fark tamamen bellek erişim düzeninde.**
+yürütmek.
 
-> **Konusmaci notu.** Gün 1'de 'sabitler önemsiz, büyüme hızı önemli' demiştiniz. Burada dürüst olun: BigO aynı olsa bile sabit 10 kat olabiliyor ve bu gerçek paradır. BigO yanlış değil, sadece hikâyenin tamamı değil. Vec<Vec<T>> yerine düz Vec<T> + indeks hesabı kullanmanın sebebi de bu.
+İşler iç içe geçer, sırayla
 
----
+ilerler, araya girilir.
 
-### 7 - Şimdi çok çekirdek.
+TEK çekirdekte de olur.
 
-Her çekirdeğin KENDİ L1'i var.
-Yani aynı verinin birden çok kopyası dolaşıyor.
+Soru: işleri nasıl
 
-> **Konusmaci notu.** Buradan sonrası eşzamanlılığın neden zor olduğunun cevabı. Tek çekirdekte 'bellek' tek bir gerçekti. Çok çekirdekte her çekirdeğin kendi görüşü var ve bunları tutarlı tutmak donanımın işi.
+DÜZENLERİM?
 
----
+Birden çok işi AYNI ANDA
 
-### 8 - Cache tutarlılığı ve false sharing
+fiziksel olarak yürütmek.
 
-*Paylaşmadığınızı sandığınız şeyi paylaşmak*
+Çok çekirdek ŞART.
 
-```
-struct Sayac { a: u64, b: u64 }   // 16 byte -> AYNI cache satirinda
+Bu makinede en fazla 16.
 
-  thread 1:  sayac.a += 1        (cekirdek 0)
-  thread 2:  sayac.b += 1        (cekirdek 1)
+Eşzamanlılığın bir
 
-Mantiken tamamen bagimsiz. Donanimda degil:
-ayni 64 byte'lik satir iki cekirdek arasinda surekli gidip geliyor.
+gerçekleşme biçimidir.
 
-Tek thread'den bile YAVAS calisabilir.
-```
+Soru: nasıl HIZLANDIRIRIM?
 
-**Çözüm: aralarına dolgu koyup ayrı cache satırlarına düşürmek.**
-
-> **Konusmaci notu.** Buna 'false sharing' deniyor — sahte paylaşım. Kod doğru, sonuç doğru, performans felaket. Rust bunu ENGELLEMİYOR; Rust veri yarışını engelliyor, yavaşlığı değil. Dürüst olun: güvenli kod otomatik olarak hızlı kod demek değil. crossbeam'in CachePadded tipi tam olarak bu iş için var.
+> **Konusmaci notu.** Klasik cumle: eszamanlilik bir YAPI meselesi, paralellik bir YURUTME meselesi. Tek cekirdekli bir telefon bile eszamanli calisir: muzik calarken ekrani ciziyor. Paralellik ise donanim ister. Her paralel program eszamanlidir; her eszamanli program paralel degildir.
 
 ---
 
-### 9 - Veri yarışı donanımda ne demek?
+### 4 - İşletim sistemi 431 süreci nasıl yönetiyor?
 
-*x += 1 tek bir işlem değil*
+zaman dilimi + bağlam değiştirme
 
 ```
-sayac += 1   aslinda uc adim:
+cekirdek 0'in zaman cizgisi:
 
-    1. oku      (load)
-    2. arttir   (add)
-    3. yaz      (store)
+  |--tarayici--|--muzik--|--derleyici--|--tarayici--|--terminal--|
+       ~5 ms      ~5 ms       ~5 ms         ~5 ms        ~5 ms
 
-  cekirdek 0        cekirdek 1
-  oku   -> 5
-                    oku   -> 5
+Her degisimde ZAMANLAYICI (scheduler) devreye giriyor:
+  1. calisan surecin register'larini kaydet
+  2. siradakinin register'larini yukle
+  3. bellek haritasini (MMU) degistir
+
+Buna BAGLAM DEGISTIRME (context switch) deniyor.
+```
+
+Bu makinede iki thread arasında gidiş-dönüş ~14 µs ölçüldü. Bedava değil — ama 5 ms'lik dilimin yanında küçük.
+
+> **Konusmaci notu.** Anlatirken zaman cizgisini tahtaya cizin. Zaman dilimi (time slice) tipik olarak birkac milisaniye. Insan gozu bunu fark etmez, o yuzden her sey ayni anda calisiyor SANIRIZ. Baglam degistirme maliyeti bos degil: register kaydet/yukle, cache soguyor, MMU tablolari degisiyor. Surecler arasi gecis, thread'ler arasi gecisten PAHALI - cunku bellek haritasi da degisiyor.
+
+---
+
+### 5 - Thread'i aslında kim açıyor?
+
+strace ile yakalandı — Rust'ın açtığı thread
+
+```
+$ strace -f -e trace=clone3 ./program
+
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND
+               |CLONE_THREAD|CLONE_SETTLS|...,
+         stack_size=0x1fff40})           <- 2 MiB
+
+CLONE_VM     : ayni bellek alanini paylas  (heap ORTAK)
+CLONE_FILES  : ayni acik dosyalari paylas
+CLONE_THREAD : ayni surecin parcasi ol
+```
+
+Linux'ta süreç de thread de aynı çekirdek yapısıdır (task). Fark: hangi bayrakları paylaştıkları.
+
+> **Konusmaci notu.** Bu ciktiyi ben aldim, uydurma degil - sinifta canli da gosterebilirsiniz. Ogretici olan: thread ozel bir sey degil, sadece BELLEGI PAYLASAN bir surec. Linux'ta ikisi de task_struct. fork() bu bayraklari vermez, o yuzden ayri bellek alani cikar. stack_size satirina dikkat cekin: 2 MiB rakami burada, sistem cagrisinin icinde goruluyor.
+
+---
+
+### 6 - Thread'in üç hâli
+
+zamanlayıcı bunlar arasında gezdiriyor
+
+ÇALIŞIYOR (running) — şu an bir çekirdekte. En fazla 16 tane olabilir.
+
+HAZIR (ready) — işi var, sırasını bekliyor. Çekirdek boşalınca girecek.
+
+BLOKE (blocked) — I/O bekliyor: ağ, disk, kilit. Çekirdeği BIRAKTI.
+
+Bloke thread çekirdek harcamaz — ama 2 MiB stack'ini tutmaya devam eder.
+
+10.000 bağlantı = 10.000 bloke thread = 20 GB. İşte async'in sebebi (Ders 4).
+
+> **Konusmaci notu.** Uc hali tahtaya cizin, oklarla baglayin. Anahtar nokta: bloke thread cekirdek harcamiyor, isletim sistemi yerine baskasini koyuyor - bu yuzden 1870 thread 16 cekirdekte rahatca duruyor, cogu bloke. AMA bellek harciyor. Ders 4'te async'in derdi tam olarak bu: beklemek icin thread harcamamak.
+
+---
+
+### 7 - Süreç ve thread farkı
+
+ikisi de yürütme akışı — fark neyi paylaştıkları
+
+```
+  SUREC (process)                                    
+  +--------------------------------------------+     
+  |  KOD        (ortak)                        |     
+  |  STATIC     (ortak)                        |     
+  |  HEAP       (ortak)  <- Box, Vec, String   |     
+  |                                            |     
+  |  +----------------+   +----------------+   |     
+  |  | thread 1 STACK |   | thread 2 STACK |   |     
+  |  | + register'lar |   | + register'lar |   |     
+  |  +----------------+   +----------------+   |     
+  +--------------------------------------------+
+```
+
+İki SÜREÇ hiçbir şey paylaşmaz. Aynı sürecin iki THREAD'i heap'i paylaşır — bütün mesele burada.
+
+> **Konusmaci notu.** Kritik cumle: thread'ler heap'i paylasir. Iki thread ayni Vec'e dokunabiliyor cunku Vec'in verisi heap'te. Stack'ler ayri, o yuzden yerel degiskenler cakismaz. Surecler arasinda paylasim yok - bu yuzden guvenli ama iletisim pahali (IPC gerekir). Thread ucuz iletisim verir, bedeli: veri yarisi riski. Gun 2'deki bellek haritasinin ustune bunu koyun.
+
+---
+
+### 8 - Thread bedava değil
+
+bu makinede ölçüldü
+
+Ne
+
+Değer
+
+Ana thread stack (Linux)
+
+8 MB
+
+Rust'ta açılan thread stack
+
+2 MiB (varsayılan)
+
+Bir thread açıp beklemek
+
+~82 µs
+
+İki thread arası gidiş-dönüş
+
+~14 µs
+
+Bu makinedeki çekirdek
+
+16
+
+> **Konusmaci notu.** 82 mikrosaniye kucuk gorunuyor ama 1000 kucuk is icin 82 ms eder; isin kendisi 1 ms ise zarardasiniz. Ders 1'de bunu olcerek gosterecegiz. Ayrica 10.000 baglanti icin 10.000 thread acamazsiniz: 2 MiB x 10.000 = 20 GB. Ders 4'te async tam bu yuzden var.
+
+---
+
+### 9 - Paralellik de thread mi kullanıyor?
+
+kısa cevap: genelde evet, ama şart değil
+
+Paralelliğin birimi thread'tir: işletim sistemi thread'leri FARKLI çekirdeklere dağıtır.
+
+Ama thread ≠ paralellik. Tek çekirdekte 100 thread açarsanız eşzamanlılık olur,
+
+   paralellik olmaz — sırayla çalışırlar.
+
+Ve paralellik illa thread gerektirmez: SIMD (tek çekirdek, tek komut çok veri),
+
+   GPU, ya da ayrı süreçler de paralellik verir.
+
+Rust'ta: thread::spawn -> OS dağıtır · rayon -> thread havuzu · async -> tek thread'de eşzamanlılık.
+
+> **Konusmaci notu.** Bu soruyu sinif mutlaka soruyor. Net cevap: paralellik icin bir yurutme birimi lazim ve o birim genelde thread. Ama iliski tek yonlu degil: thread actiginiz an paralellik garanti degil - cekirdek bosta degilse sirada bekler. Async ornegi onemli: Ders 4'te tek thread'de uc isi es zamanli yurutecegiz, hicbir paralellik yok ama sure ucte bire iniyor.
+
+---
+
+### 10 - Rust'ta thread = işletim sistemi thread'i
+
+1:1 model, arada katman yok
+
+std::thread::spawn bir İŞLETİM SİSTEMİ thread'i açar (Linux'ta pthread).
+
+Rust'ın kendi thread zamanlayıcısı yoktur; zamanlayan işletim sistemidir.
+
+std bir runtime taşımaz — aynı dil gömülü sistemde de çalışsın diye.
+
+Go farklı: goroutine'ler M:N — runtime binlerce goroutine'i az sayıda
+
+   OS thread'ine dağıtır. Ucuz, ama runtime taşımak zorundasınız.
+
+O modeli isterseniz kütüphaneden eklersiniz: tokio — Ders 4.
+
+> **Konusmaci notu.** Bu slayt 'zero-cost abstraction' felsefesinin thread'lerdeki karsiligi: Rust size isletim sisteminin verdigini verir, ustune bedel koymaz. Go karsilastirmasi: goroutine ucuz ama runtime zorunlu. Rust ikisini ayirmis: thread = OS, hafif gorev = tokio task.
+
+---
+
+### 11 - spawn ve join
+
+thread açmanın tamamı
+
+```
+let handle = thread::spawn(|| {
+    // bu blok AYRI bir thread'de calisir
+    "sistem bizim"                  // deger dondurebilir
+});
+
+// main bu sirada kendi isini yapar...
+
+let sonuc = handle.join().unwrap();  // bekle + degeri al
+```
+
+join() çağırmazsanız main bitince thread yarıda kesilebilir. Çıktı sırası GARANTİ DEĞİL.
+
+> **Konusmaci notu.** spawn bir JoinHandle dondurur. join iki is yapar: bekler ve donen degeri verir. unwrap orada cunku thread panikleyebilir - join Result doner. Ciktinin sirasiz olmasi bir hata degil, tanimin kendisi: zamanlayici karar veriyor.
+
+---
+
+### 12 - Eşzamanlılık neden zor?
+
+x += 1 tek bir işlem değil
+
+```
+sayac += 1   aslinda uc adim:   oku / arttir / yaz
+
+  cekirdek 0            cekirdek 1
+  oku    -> 5
+                        oku    -> 5
   arttir -> 6
-                    arttir -> 6
-  yaz   -> 6
-                    yaz   -> 6      <-- iki artis, sonuc 6
-
-Bir artis kayboldu. Her calistirmada olmaz - iste sorun bu.
+                        arttir -> 6
+  yaz    -> 6
+                        yaz    -> 6     <- iki artis, sonuc 6
 ```
 
-**Tekrarlanamayan hata: testlerde geçer, üretimde patlar.**
+Bir artış kayboldu. HER ZAMAN olmuyor — testlerde geçer, üretimde patlar.
 
-> **Konusmaci notu.** Bu tabloyu tahtaya çizin. Anahtar cümle: hata HER ZAMAN olmuyor, zamanlamaya bağlı. Bu yüzden veri yarışları hata ayıklamanın en zor sınıfı — hata ayıklayıcı eklemek zamanlamayı değiştirip hatayı kaçırıyor ('heisenbug'). Çözüm test etmek değil, MÜMKÜN OLMAMASINI sağlamak.
-
----
-
-### 10 - İki büyük yaklaşım
-
-*İkisi de Rust'ta var — yarın ikisini de kullanacaksınız*
-
-**Paylaşımlı bellek**
-
-- Aynı veriye birden çok thread erişir
-- Kilit (Mutex) ile sıraya sokulur
-- Hızlı — kopyalama yok
-- Riskler: kilitlenme, unutulan kilit, false sharing
-- Rust: Arc<Mutex<T>>, RwLock
-
-**Mesajlaşma**
-
-- Veri paylaşılmaz, sahiplik devredilir
-- Kanal üzerinden gönderilir
-- Akıl yürütmesi çok daha kolay
-- Bedeli: kopyalama ve kanal maliyeti
-- Rust: mpsc kanalları
-
-> **Konusmaci notu.** Go'nun sloganı: 'Belleği paylaşarak iletişim kurmayın, iletişim kurarak belleği paylaşın.' Rust ikisine de izin veriyor ama ownership sayesinde mesajlaşmada veriyi gönderdikten sonra ELİNİZDE KALMIYOR — derleyici bunu garanti ediyor. Yarın Gün 9'da ikisini de yazacaksınız.
+> **Konusmaci notu.** Bu tabloyu tahtaya cizin. Anahtar cumle: hata zamanlamaya bagli, tekrarlanamiyor. Hata ayiklayici eklemek zamanlamayi degistirip hatayi kacirir (heisenbug). Cozum test etmek degil, MUMKUN OLMAMASINI saglamak.
 
 ---
 
-### 11 - Rust'ın cevabı
+### 13 - Rust'ın cevabı: `move`
 
-*Veri yarışı bir çalışma zamanı sorunu değil, tip sorunu*
+thread ne kadar yaşayacak, derleyici bilmiyor
 
-- **Ownership kuralı zaten yeterliydi** - Ya çok okuyucu ya tek yazıcı — bu kural tek thread'de de, çok thread'de de aynı
-- **Send: bu tip başka bir thread'e taşınabilir mi?** - Derleyici otomatik çıkarıyor. Rc<T> Send değil, Arc<T> Send
-- **Sync: bu tipe iki thread aynı anda referansla bakabilir mi?** - &T'nin Send olması demek. Cell ve RefCell Sync değil
-- **Sonuç: veri yarışı içeren kod DERLENMİYOR** - Gün 2'de öğrendiğiniz kural, bugün bedava eşzamanlılık güvenliği veriyor
+```
+let ekipman = vec![String::from("EMP granati")];
+thread::spawn(|| println!("{:?}", ekipman));
 
-> **Konusmaci notu.** Haftanın en tatmin edici bağlantısı bu. Gün 2'de 'ya çok okuyucu ya tek yazıcı' kuralını bellek güvenliği için öğrendiler. Aynı kural, hiçbir ek şey yapmadan, veri yarışlarını da kapatıyor. Rust'ın 'fearless concurrency' dediği şey bu. AMA dürüst olun: kilitlenme (deadlock) hâlâ mümkün, false sharing hâlâ mümkün, mantık hatası hâlâ mümkün. Rust VERİ YARIŞINI kapatıyor, eşzamanlılığı kolaylaştırıyor ama çözmüyor.
+error[E0373]: closure may outlive the current function,
+              but it borrows `ekipman`
+
+thread::spawn(move || println!("{:?}", ekipman));  // TASI
+println!("{:?}", ekipman);  // E0382: artik senin degil
+```
+
+ekipman main'de düşebilir, thread hâlâ çalışıyor olabilir → sarkan referans.
+
+> **Konusmaci notu.** Haftanin en tatmin edici bagi: Gun 2'de ogrendikleri sarkan referans kurali bugun thread'de karsilarina cikiyor. C'de bu kod DERLENIR ve rastgele coker. Rust'ta derlenmez. Ayni verinin iki sahibi olamadigi icin veri yarisinin yarisi zaten kapandi.
 
 ---
 
-### 12 - Şimdi thread yazalım
+### 14 - `move` tam olarak ne yapıyor?
 
-thread::spawn, move closure, thread::scope — ve neden move zorunlu
-Yarın: Arc<Mutex>, kanallar, Send/Sync ve async
+sahiplik thread'e GEÇER — geri alamazsınız
+
+```
+let ad = String::from("Kaya");
+let h = thread::spawn(move || ad.len());
+println!("{}", ad);        // E0382: value moved into closure
+
+let sayi = 5;                        // i32 = Copy
+let h = thread::spawn(move || sayi * 2);
+println!("{}", sayi);      // CALISIR - kopyalandi, tasinmadi
+```
+
+Taşımak istemiyorsanız iki yol var: thread::scope ile ödünç alın, ya da Arc ile paylaşın.
+
+> **Konusmaci notu.** Uc noktayi vurgulayin. BIR: move sahipligi devreder, geri donusu yok - main artik o veriye dokunamaz. IKI: Copy tipler istisna degil, sadece kopyalaniyorlar; move yine oluyor ama orijinal yerinde kaliyor. UC: move 'kac kez cagrilir'i belirlemez - move'lu closure hala Fn olabilir, iki kez cagrilabilir. Tasimak istemiyorsaniz thread::scope var: scope icindeki thread'ler scope bitmeden once bittigi icin derleyici odunc almaya izin veriyor. Kod seansinda ikisini de yazacagiz.
+
+---
+
+### 15 - Send ve Sync
+
+derleyici verir, siz yazmazsınız (marker trait)
+
+Send
+
+Sync
+
+Bu tip başka bir thread'e
+
+TAŞINABİLİR mi?
+
+Arc<T>  -> Send
+
+Rc<T>   -> DEĞİL
+
+Sebep: Rc'nin sayacı atomik
+
+değil. İki thread aynı anda
+
+artırırsa sayaç bozulur,
+
+veri erken düşer.
+
+Bu tipe &T ile birden çok
+
+thread'den ERİŞİLEBİLİR mi?
+
+Mutex<T>   -> Sync
+
+RefCell<T> -> DEĞİL
+
+Sebep: RefCell'in ödünç
+
+sayacı çalışma zamanında
+
+tutuluyor ve thread-safe
+
+değil.
+
+> **Konusmaci notu.** Ikisi de MARKER trait: govdesi yok, derleyici otomatik cikariyor. Ogrenciler bu isimleri hata mesajlarinda gorecek: 'cannot be sent between threads safely'. Gun 7'de Rc<RefCell<T>> yazdik; Ders 2'de ayni yapiyi Arc<Mutex<T>> olarak yazacagiz. Sebep bu slayt.
+
+---
+
+### 16 - Rust ne söz veriyor, ne vermiyor
+
+abartmayalım
+
+SÖZ: veri yarışı içeren kod DERLENMEZ. Ownership kuralı bunu kapatıyor.
+
+SÖZ DEĞİL: kilitlenme (deadlock) hâlâ mümkün — derleyici tek satır uyarmaz.
+
+SÖZ DEĞİL: yanlış sıra, eksik kilit, mantık hatası hâlâ sizin sorununuz.
+
+SÖZ DEĞİL: paralel kod otomatik HIZLI değil — thread açmanın bedeli var.
+
+"Fearless concurrency" = korkmadan deneyebilirsiniz; hatasız demek değil.
+
+> **Konusmaci notu.** Rust bir hata SINIFINI kapatiyor - en sinsi olanini. Digerleri duruyor. Ders 2'de deadlock'u, Ders 1'de paralelligin ne zaman zarar ettigini olcerek gorecegiz.
+
+---
+
+### 17 - İki yaklaşım
+
+ikisi de Rust'ta var, ikisini de yazacağız
+
+PAYLAŞIMLI BELLEK
+
+MESAJLAŞMA
+
+Aynı veriye çok thread erişir,
+
+kilitle sıraya sokulur.
+
+Rust: Arc<Mutex<T>>
+
++ kopyalama yok
+
+- deadlock riski
+
+Ders 2
+
+Veri paylaşılmaz,
+
+SAHİPLİĞİ devredilir.
+
+Rust: mpsc kanalları
+
++ akıl yürütmesi kolay
+
+- kopyalama/kanal maliyeti
+
+Ders 3
+
+> **Konusmaci notu.** Go'nun slogani: 'Bellegi paylasarak iletisme; ileterek paylas.' Rust ikisine de izin veriyor. Farki: kanala gonderdiginiz veri ELINIZDE KALMIYOR - ownership bunu garanti ediyor, bu yuzden kanalda veri yarisi imkansiz.
+
+---
+
+### 18 - Şimdi thread yazalım.
+
+thread::spawn · move closure · thread::scope · ve paralelliğin ne zaman zarar ettiğini ölçmek
+
+> **Konusmaci notu.** Kod seansina geciyoruz: Ders 1 main.rs.
 

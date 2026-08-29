@@ -1,16 +1,16 @@
 // Gun 8 / Ders 2 - Arc, Mutex ve Paylasilan Durum
 // rustc main.rs && ./main
 //
-// Mutfakta ortak kiler var. Dort sef ayni anda stok dusuyor.
+// Kuledeki kasa TEK. Dort ekip uyesi ayni anda kredi cekiyor.
 // Gun 7'deki tablonun SAG sutunu bugun doluyor.
 
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Instant;
 
-struct Pantry {
-    tomatoes: u32,
-    served: u32,
+struct Vault {
+    credits: u32,        // kasada kalan
+    hauls: u32,          // yapilan cekim sayisi
 }
 
 fn main() {
@@ -25,25 +25,25 @@ fn main() {
     println!("  Rc: tek thread | Arc: cok thread (sayac atomik)");
 
     println!("-- 2) Arc<Mutex<T>>: paylasilan ve degistirilebilir --");
-    let pantry = Arc::new(Mutex::new(Pantry { tomatoes: 100, served: 0 }));
+    let vault = Arc::new(Mutex::new(Vault { credits: 100, hauls: 0 }));
     let mut handles = Vec::new();
-    for sef in 1..=4 {
-        let ortak = Arc::clone(&pantry);              // sayac artiyor, veri kopyalanmiyor
+    for uye in 1..=4 {
+        let ortak = Arc::clone(&vault);               // sayac artiyor, veri kopyalanmiyor
         handles.push(thread::spawn(move || {
             for _ in 0..10 {
-                let mut kiler = ortak.lock().unwrap();   // KILIT alindi
-                kiler.tomatoes -= 1;
-                kiler.served += 1;
+                let mut kasa = ortak.lock().unwrap();    // KILIT alindi
+                kasa.credits -= 1;
+                kasa.hauls += 1;
             }                                             // MutexGuard dustu -> kilit birakildi
-            sef
+            uye
         }));
     }
     for h in handles {
-        let sef = h.join().unwrap();
-        println!("  {}. sef bitirdi", sef);
+        let uye = h.join().unwrap();
+        println!("  {}. uye cekimini bitirdi", uye);
     }
-    let son = pantry.lock().unwrap();
-    println!("  kalan domates: {} | cikan tabak: {}", son.tomatoes, son.served);
+    let son = vault.lock().unwrap();
+    println!("  kasada kalan: {} kredi | toplam cekim: {}", son.credits, son.hauls);
     drop(son);                                        // kilidi erken birak
 
     println!("-- 3) kilit RAII ile birakiliyor --");
@@ -51,16 +51,16 @@ fn main() {
     let log = Arc::new(Mutex::new(Vec::<String>::new()));
     {
         let mut kayit = log.lock().unwrap();
-        kayit.push(String::from("servis basladi"));
+        kayit.push(String::from("giris 02:14"));
     }   // kapsam bitti, kilit birakildi
     let mut kayit = log.lock().unwrap();
-    kayit.push(String::from("servis bitti"));
+    kayit.push(String::from("cikis 02:31"));
     drop(kayit);                                      // ya da acikca drop
     println!("  kayit: {:?}", log.lock().unwrap());
 
     println!("-- 4) kilidi ne kadar tutmali --");
     // Hesabi kilidin ICINDE yaparsaniz paralellik kalmaz: herkes sirayla calisir.
-    for (etiket, kilitte_hesapla) in [("kilit icinde hesap", true), ("kilit disinda hesap", false)] {
+    for (etiket, kilitte_hesapla) in [("kilit icinde kirma", true), ("kilit disinda kirma", false)] {
         let toplam = Arc::new(Mutex::new(0u64));
         let t0 = Instant::now();
         thread::scope(|s| {
@@ -69,9 +69,9 @@ fn main() {
                 s.spawn(move || {
                     if kilitte_hesapla {
                         let mut t = toplam.lock().unwrap();
-                        *t += agir_hesap();            // KILIT TUTULURKEN hesap
+                        *t += sifre_kir();             // KILIT TUTULURKEN hesap
                     } else {
-                        let sonuc = agir_hesap();      // hesap once
+                        let sonuc = sifre_kir();       // hesap once
                         let mut t = toplam.lock().unwrap();
                         *t += sonuc;                   // kilit sadece yazmak icin
                     }
@@ -82,29 +82,29 @@ fn main() {
     }
 
     println!("-- 5) RwLock: cok okuyucu, tek yazici --");
-    let menu = Arc::new(RwLock::new(vec![String::from("corba"), String::from("pilav")]));
+    let plan = Arc::new(RwLock::new(vec![String::from("catidan gir"), String::from("asansor sifti")]));
     thread::scope(|s| {
         for id in 1..=3 {
-            let menu = Arc::clone(&menu);
+            let plan = Arc::clone(&plan);
             s.spawn(move || {
-                let okunan = menu.read().unwrap();     // ucu de AYNI ANDA okuyabilir
-                println!("    [garson {}] menude {} yemek var", id, okunan.len());
+                let okunan = plan.read().unwrap();     // ucu de AYNI ANDA okuyabilir
+                println!("    [uye {}] planda {} adim var", id, okunan.len());
             });
         }
     });
-    menu.write().unwrap().push(String::from("tatli")); // yazarken kimse okuyamaz
-    println!("  menu guncellendi: {:?}", menu.read().unwrap());
+    plan.write().unwrap().push(String::from("kacis: garaj")); // yazarken kimse okuyamaz
+    println!("  plan guncellendi: {:?}", plan.read().unwrap());
 
     println!("-- 6) poisoning: kilit tutulurken panic --");
-    let stok = Arc::new(Mutex::new(10u32));
-    let kopya = Arc::clone(&stok);
+    let alarm = Arc::new(Mutex::new(10u32));
+    let kopya = Arc::clone(&alarm);
     let sonuc = thread::spawn(move || {
         let _g = kopya.lock().unwrap();
-        panic!("sef bicagi dusurdu");                  // kilit TUTULURKEN panic
+        panic!("uye yakalandi");                       // kilit TUTULURKEN panic
     })
     .join();
     println!("  thread sonucu hata mi: {}", sonuc.is_err());
-    match stok.lock() {
+    match alarm.lock() {
         Ok(_) => println!("  kilit temiz"),
         Err(zehirli) => {
             // Mantik: veri tutarsiz kalmis olabilir, sessizce devam etmek tehlikeli.
@@ -118,7 +118,7 @@ fn main() {
     println!("  Rc: Send degil (sayac atomik degil) | RefCell: Sync degil (kontrol thread-safe degil)");
 }
 
-fn agir_hesap() -> u64 {
+fn sifre_kir() -> u64 {
     let mut t = 0u64;
     for i in 1..=3_000_000u64 {
         t = t.wrapping_add(i);

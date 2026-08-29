@@ -1,7 +1,8 @@
 // Gun 8 / Ders 5 - Tek Yonlu Bagli Liste
 // rustc main.rs && ./main
 //
-// Mutfagin siparis rayi: yeni fis EN ONE asilir, sef en ondekini alir (LIFO).
+// Ekibin canta destesi: son atilan canta EN USTE gelir, kacarken de en ustteki
+// once alinir (LIFO). Klasik tek yonlu bagli liste.
 //
 // Bu ders yeni bir konu degil - kampin TOPLAMI:
 //   Box (dun)          -> ozyinelemeli tip
@@ -19,17 +20,17 @@ struct Node<T> {
     next: Link<T>,
 }
 
-pub struct TicketRail<T> {
+pub struct Stash<T> {
     head: Link<T>,
     len: usize,
 }
 
-impl<T> TicketRail<T> {
-    fn new() -> TicketRail<T> {
-        TicketRail { head: None, len: 0 }
+impl<T> Stash<T> {
+    fn new() -> Stash<T> {
+        Stash { head: None, len: 0 }
     }
 
-    // EN ONE ekle. Yeni dugumun next'i eski head olur.
+    // EN USTE ekle. Yeni dugumun next'i eski head olur.
     fn push(&mut self, elem: T) {
         // self.head'i DOGRUDAN tasiyamayiz: elimizde &mut var, sahiplik yok.
         //   let eski = self.head;
@@ -40,7 +41,7 @@ impl<T> TicketRail<T> {
         self.len += 1;
     }
 
-    // EN ONDEKINI cikar. Liste bossa None.
+    // EN USTTEKINI cikar. Liste bossa None.
     fn pop(&mut self) -> Option<T> {
         self.head.take().map(|dugum| {
             self.head = dugum.next;      // dugum burada sahiplenildi, alanlari serbest
@@ -91,7 +92,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
 }
 
 // Sahiplenen surum: liste tuketilir
-impl<T> Iterator for TicketRail<T> {
+impl<T> Iterator for Stash<T> {
     type Item = T;
     fn next(&mut self) -> Option<T> {
         self.pop()
@@ -104,7 +105,7 @@ impl<T> Iterator for TicketRail<T> {
 // Varsayilan drop OZYINELEMELI calisir: head dusurulurken next dusurulur,
 // o dusurulurken bir sonraki... Uzun listede YIGIN TASAR (stack overflow).
 // Iteratif surum bunu onler:
-impl<T> Drop for TicketRail<T> {
+impl<T> Drop for Stash<T> {
     fn drop(&mut self) {
         let mut simdiki = self.head.take();
         while let Some(mut dugum) = simdiki {
@@ -115,23 +116,23 @@ impl<T> Drop for TicketRail<T> {
 
 fn main() {
     println!("-- 1) temel islemler --");
-    let mut rail: TicketRail<&str> = TicketRail::new();
-    println!("  bos mu: {}", rail.is_empty());
-    rail.push("masa 3: corba");
-    rail.push("masa 7: pilav");
-    rail.push("masa 1: tatli");
-    println!("  {} fis asili", rail.len());
-    println!("  en ondeki: {:?}", rail.peek());
+    let mut stash: Stash<&str> = Stash::new();
+    println!("  bos mu: {}", stash.is_empty());
+    stash.push("kasa 3: tahvil");
+    stash.push("kasa 7: elmas");
+    stash.push("kasa 1: veri cekirdegi");
+    println!("  {} canta var", stash.len());
+    println!("  en ustteki: {:?}", stash.peek());
 
-    println!("-- 2) LIFO: son asilan once alinir --");
-    while let Some(fis) = rail.pop() {
-        println!("    alindi: {}", fis);
+    println!("-- 2) LIFO: son atilan once alinir --");
+    while let Some(canta) = stash.pop() {
+        println!("    araca kondu: {}", canta);
     }
-    println!("  bos mu: {}", rail.is_empty());
-    println!("  bos listeden pop: {:?}", rail.pop());
+    println!("  bos mu: {}", stash.is_empty());
+    println!("  bos desteden pop: {:?}", stash.pop());
 
     println!("-- 3) generic: her tipi tasir --");
-    let mut sayilar: TicketRail<u32> = TicketRail::new();
+    let mut sayilar: Stash<u32> = Stash::new();
     for n in [10, 20, 30] {
         sayilar.push(n);
     }
@@ -153,11 +154,11 @@ fn main() {
     println!("  15'ten buyukler: {:?}", buyukler);
 
     println!("-- 6) sahiplenen iterator: liste tukenir --");
-    let toplam2: u32 = sayilar.by_ref().take(2).sum();   // ilk iki fisi TUKETIR
+    let toplam2: u32 = sayilar.by_ref().take(2).sum();   // ilk iki cantayi TUKETIR
     println!("  ilk ikisinin toplami: {} | kalan uzunluk: {}", toplam2, sayilar.len());
 
     println!("-- 7) uzun liste: iteratif Drop --");
-    let mut buyuk: TicketRail<u32> = TicketRail::new();
+    let mut buyuk: Stash<u32> = Stash::new();
     for i in 0..200_000 {
         buyuk.push(i);
     }

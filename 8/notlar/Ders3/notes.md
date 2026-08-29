@@ -1,7 +1,6 @@
 # Gün 8 · Ders 3 — Kanallar
 
-Mutfağın servis penceresi: siparişler salondan mutfağa akıyor, hazır tabaklar geri
-dönüyor.
+Ekibin **telsizi**. Sahadaki üyeler merkeze rapor geçiyor: konuşan çok, dinleyen tek.
 
 > **Belleği paylaşarak iletişme; ileterek paylaş.**
 
@@ -12,7 +11,7 @@ olur, thread'ler onu birbirine **gönderir**. Kilit yok, çünkü paylaşım yok
 
 ```rust
 let (tx, rx) = mpsc::channel();
-thread::spawn(move || { tx.send(String::from("mercimek corbasi")).unwrap(); });
+thread::spawn(move || { tx.send(String::from("catiya cikildi")).unwrap(); });
 println!("{}", rx.recv().unwrap());
 ```
 
@@ -22,19 +21,59 @@ println!("{}", rx.recv().unwrap());
 ## Kanal sahiplik taşır
 
 ```rust
-let siparis = String::from("kuru fasulye");
-tx.send(siparis).unwrap();
-println!("{}", siparis);        // E0382: kanala taşındı
+let kart = String::from("erisim karti #7");
+tx.send(kart).unwrap();
+println!("{}", kart);           // E0382: kanala taşındı
 ```
 
 Gönderdiğiniz değer artık alıcınındır. Kanal bir **sahiplik borusudur** — bu yüzden
 kanalla veri yarışı yapmak mümkün değil. Kilit gerekmemesinin sebebi bu.
 
+## `send` ve `recv` birer `Result` döndürür
+
+Kanalın iki ucu var; biri düşerse diğerinin işlemi başarısız olur. İkisi de `Result`
+döndürüyor:
+
+```rust
+drop(rx);
+match tx.send(7) {
+    Ok(_)  => println!("gonderildi"),
+    Err(e) => println!("alici dusmus - deger geri geldi: {}", e.0),
+}
+```
+
+```
+gonderilemedi, alici dusmus - deger geri geldi: 7
+```
+
+`SendError` içinde **gönderemediğiniz değer** duruyor (`e.0`) — kaybolmuyor, size iade
+ediliyor. Sahiplik mantığının doğal sonucu: değeri alacak kimse yoksa geri sizin olur.
+
+`recv()` de aynı şekilde: bütün göndericiler düştüyse `Err` döner. Zaten
+`for gelen in rx` döngüsünün bitme sebebi budur.
+
+### `try_recv` — beklemeden bakmak
+
+`recv()` **bloklar**. Beklemeden bakmak isterseniz `try_recv()` var ve iki farklı
+başarısızlığı ayırt eder:
+
+```rust
+match rx.try_recv() {
+    Ok(v)                              => println!("{}", v),
+    Err(TryRecvError::Empty)           => println!("su an bos ama kanal ACIK"),
+    Err(TryRecvError::Disconnected)    => println!("kanal kapali"),
+}
+```
+
+Fark önemli: **Empty** "sonra tekrar bak" demek, **Disconnected** "bir daha hiç gelmeyecek"
+demek. Aynı `Err`'in içinde iki bambaşka karar — Gün 4'te enum'ların neden `bool`'dan
+iyi olduğunu konuşmuştuk, örneği bu.
+
 ## Alıcı bir iterator'dur
 
 ```rust
 for gelen in rx {
-    println!("servis: {}", gelen);
+    println!(">> {}", gelen);
 }
 ```
 
@@ -44,8 +83,8 @@ düştüğünde.
 ## En sık takılınan yer: `drop(tx)`
 
 ```rust
-for istasyon in 1..=3 {
-    let tx = tx.clone();                 // her thread kendi klonunu alır
+for uye in 1..=3 {
+    let tx = tx.clone();                 // her üye kendi telsizini alır
     thread::spawn(move || { tx.send(...).unwrap(); });
 }
 drop(tx);                                // ORİJİNALİ düşürmeyi UNUTMAYIN
@@ -59,28 +98,28 @@ Sınıfta o satırı yorum yapıp programın donduğunu gösterin — bir kez g�
 
 ## İş havuzu
 
-Tek kuyruk, üç şef. Alıcı tek olduğu için `Arc<Mutex<Receiver>>` ile paylaşılıyor:
+Tek kuyruk, üç kasacı. Alıcı tek olduğu için `Arc<Mutex<Receiver>>` ile paylaşılıyor:
 
 ```rust
 let is = {
     let kuyruk = is_rx.lock().unwrap();
     kuyruk.recv()
 };                                   // kilit BURADA bırakıldı
-let hazirlik = agir_hesap(masa);     // hesap kilit DIŞINDA
+let kod = sifre_kir(kapi);           // hesap kilit DIŞINDA
 ```
 
 **Kritik detay:** kilit yalnızca **iş almak** için tutulur. Hesabı kilidin içinde
 yaparsanız paralellik kalmaz — Ders 2'de bunu ölçmüştük (49.7ms → 12.5ms).
 
 ```
-9 siparis dagitildi
+9 kapi acildi
 ```
 
-Dokuz masanın hangi şefe düştüğü **her çalıştırmada değişir** — dağılım işletim
+Dokuz kapının hangi kasacıya düştüğü **her çalıştırmada değişir** — dağılım işletim
 sisteminin kararı, sizin değil. Programı iki kez çalıştırıp satırları karşılaştırın.
 Garanti olan tek şey: **her iş tam bir kez** yapılır.
 
-Şefler `recv()` `Err` dönünce döngüden çıkar — yani `drop(is_tx)` onların "mesai bitti"
+Kasacılar `recv()` `Err` dönünce döngüden çıkar — `drop(is_tx)` onların "iş bitti"
 sinyalidir.
 
 ## `sync_channel` — geri basınç
@@ -89,11 +128,11 @@ sinyalidir.
 `sync_channel(n)` kapasiteyi sınırlar; kuyruk doluyken `send` **bloklar**:
 
 ```
-[mutfak] 1. tabak pencereye kondu
-[mutfak] 2. tabak pencereye kondu      <- kapasite doldu, mutfak bekliyor
-[garson] 1. tabak alindi
-[mutfak] 3. tabak pencereye kondu
-[garson] 2. tabak alindi
+[kasaci] 1. kasa bosaltildi
+[kasaci] 2. kasa bosaltildi      <- kapasite doldu, kasaci bekliyor
+[surucu] 1. canta araca kondu
+[kasaci] 3. kasa bosaltildi
+[surucu] 2. canta araca kondu
 ```
 
 Buna **backpressure** denir: yavaş tüketici, hızlı üreticiyi otomatik yavaşlatır.
