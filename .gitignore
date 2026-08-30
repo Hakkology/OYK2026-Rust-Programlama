@@ -1,0 +1,9 @@
+# Rust derleme ciktilari
+target/
+**/target/
+Cargo.lock.bak
+
+# Editor / OS
+.~lock.*#
+.DS_Store
+*.swp

@@ -94,8 +94,6 @@ for m in rx { ... }
 `drop(tx)` satırı olmasaydı döngü **sonsuza kadar** beklerdi: klonlar düştü ama orijinal
 `tx` hâlâ `main`'de yaşıyor, dolayısıyla kanal kapanmıyor. Program donar, hata vermez.
 
-Sınıfta o satırı yorum yapıp programın donduğunu gösterin — bir kez görülen bir hatadır.
-
 ## İş havuzu
 
 Tek kuyruk, üç kasacı. Alıcı tek olduğu için `Arc<Mutex<Receiver>>` ile paylaşılıyor:
