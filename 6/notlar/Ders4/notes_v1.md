@@ -46,9 +46,9 @@ Kural tek cümle: **`impl Trait for Type` yazabilmek için trait ya da tip sizin
 
 | | |
 |---|---|
-| `impl Display for Metro` | ✓ `Metro` benim |
-| `impl Announce for u32` | ✓ `Announce` benim |
-| `impl Display for Vec<i32>` | ✗ ikisi de başkasının |
+| `impl Display for Metro` | var `Metro` benim |
+| `impl Announce for u32` | var `Announce` benim |
+| `impl Display for Vec<i32>` | yok ikisi de başkasının |
 
 ```
 error[E0117]: only traits defined in the current crate can be implemented

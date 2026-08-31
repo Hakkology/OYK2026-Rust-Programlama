@@ -44,9 +44,9 @@ Ders 3'teki `Ord: Eq + PartialOrd` zinciri de tam olarak budur — `CritMultipli
 
 | Yazım | Durum |
 |---|---|
-| `impl Display for Dragon` | ✓ `Dragon` benim |
-| `impl Describe for u32` | ✓ `Describe` benim |
-| `impl Display for Vec<i32>` | ✗ ikisi de başkasının |
+| `impl Display for Dragon` | var `Dragon` benim |
+| `impl Describe for u32` | var `Describe` benim |
+| `impl Display for Vec<i32>` | yok ikisi de başkasının |
 
 ```
 error[E0117]: only traits defined in the current crate can be implemented

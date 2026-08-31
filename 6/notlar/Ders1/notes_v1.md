@@ -157,9 +157,9 @@ rustc main_v1.rs && nm -C main_v1 | grep longest
 ```
 main_v1::longest_f64
 main_v1::longest_i32
-main_v1::longest        ← i32
-main_v1::longest        ← f64
-main_v1::longest        ← char
+main_v1::longest   (i32)
+main_v1::longest   (f64)
+main_v1::longest   (char)
 ```
 
 Üç ayrı `longest` — üç ayrı makine kodu. Yani **çalışma zamanında generic diye bir şey

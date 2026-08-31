@@ -53,10 +53,10 @@ Dikkat edilecek iki şey:
 - İsteyen ezer, istemeyen bedava alır:
 
 ```
-Archer savasa hazir!                           ← varsayılan gövde
-Healer savasa hazir!                           ← varsayılan gövde
-Knight kalkanini kaldirdi! (25 zirh)           ← ezilmiş gövde
-GRAAAH! Alevler yukseliyor!                    ← ezilmiş gövde
+Archer savasa hazir!   (varsayılan gövde)
+Healer savasa hazir!   (varsayılan gövde)
+Knight kalkanini kaldirdi! (25 zirh)   (ezilmiş gövde)
+GRAAAH! Alevler yukseliyor!   (ezilmiş gövde)
 ```
 
 Bu, kütüphane yazarının en çok kullandığı tekniktir: trait'e yeni bir metot eklerken
@@ -215,8 +215,8 @@ Kaynak kodda aynı satır, çözülme biçimi farklı:
 | çözülme | derleme zamanı | çalışma zamanı |
 | kod boyutu | her tip için ayrı kopya | tek kopya |
 | çağrı maliyeti | sıfır, inline olabilir | bir pointer atlaması |
-| heterojen liste | ✗ | ✓ |
-| dönüşte if/else | ✗ | ✓ |
+| heterojen liste | yok | var |
+| dönüşte if/else | yok | var |
 | derleme süresi | uzar | kısalır |
 
 Ders 1'de monomorphization'ın karşıtı diye geçtiğimiz şey tam olarak bu sütun.

@@ -169,8 +169,8 @@ pub const unsafe fn split_at_mut_unchecked(&mut self, mid: usize) -> (&mut [T], 
 yorumu bile. Tek fark std'nin sınır kontrolünü ayrı bir fonksiyona (`split_at_mut_checked`)
 koyması.
 
-Sınıfa gösterilecek şey bu: **kullandığınız kütüphane sizden daha akıllı değil, sadece
-sözünü yazılı vermiş.**
+Buradaki ders şu: **kullandığınız kütüphane sizden daha akıllı değil, sadece sözünü
+yazılı vermiş.**
 
 std'nin yaptığı tam olarak budur: `Vec`, `String`, `RefCell`, `Arc`… hepsinin içi
 `unsafe`'tir. Siz güvenli Rust yazabiliyorsanız, birileri bu sözü sizin yerinize verdiği
@@ -207,6 +207,53 @@ gerçekten çağıranın bilebileceği durumlarda doğrudur (`get_unchecked` gib
 
 Yazdığınızda **`// SAFETY:` yorumu imzanın üstüne** gelir: çağıranın neyi garanti etmesi
 gerektiğini orada yazarsınız.
+
+### İki örnek daha
+
+**Sınır kontrolünü atlayan okuma.** std'deki `get_unchecked` ile aynı fikir:
+
+```rust
+// SAFETY (çağıranın sözü): index < slice.len() olmalı.
+unsafe fn read_unchecked(slice: &[i32], index: usize) -> i32 {
+    *slice.as_ptr().add(index)
+}
+
+// Aynı işin güvenli sarmalayıcısı: sınır kontrolü unsafe'in DIŞINDA.
+fn read_or_zero(slice: &[i32], index: usize) -> i32 {
+    if index < slice.len() {
+        // SAFETY: index < len olduğunu hemen yukarıda doğruladık.
+        unsafe { read_unchecked(slice, index) }
+    } else {
+        0
+    }
+}
+```
+
+Çalıştırınca: `read_unchecked(1)` 20 verir, `read_or_zero(1)` yine 20 verir,
+`read_or_zero(99)` ise 0 verir — sınır dışında ama panik yok. `read_unchecked(&veri, 99)`
+çağırsaydık tanımsız davranış olurdu; o satırı yorumda bıraktık.
+
+Kalıp her seferinde aynı: **kontrol dışarıda, `unsafe` içeride, imza temiz.**
+
+**Ham pointer üzerinden yazma.** Bu sefer söz iki parçalı — pointer geçerli olacak *ve*
+arkasında en az `len` tane yazılabilir `i32` bulunacak:
+
+```rust
+// SAFETY (çağıranın sözü): ptr geçerli, arkasında en az len tane i32 var.
+unsafe fn fill(ptr: *mut i32, len: usize, value: i32) {
+    for i in 0..len {
+        *ptr.add(i) = value;
+    }
+}
+
+let mut hedef = [0i32; 5];
+// SAFETY: hedef 5 elemanlık geçerli bir dizi, uzunluğu doğru veriyoruz.
+unsafe { fill(hedef.as_mut_ptr(), hedef.len(), 7) };
+```
+
+Sonuç `[7, 7, 7, 7, 7]`. Uzunluğu yanlış verseydiniz — mesela 5 yerine 50 — komşu belleği
+ezerdiniz. Derleyici bunu kontrol etmiyor; sözü siz veriyorsunuz. Bu iki fonksiyon
+`unsafe fn`'in ne demek olduğunun tam karşılığı: **hata ihtimali imzada değil, çağrıda.**
 
 ## `union` — beşinci süper güç
 
@@ -396,62 +443,3 @@ kütüphanelerini kullanabilmesinin bedeli bu.
 
 > `unsafe` bir kaçış kapısı değil, bir **sözleşmedir**. Derleyicinin ispat edemediğini
 > siz ispat edersiniz — ve o ispat yanlışsa kimse sizi uyarmaz.
-
----
-
-## Hocaya not: bu ders nasıl anlatılır
-
-Bu bölüm sınıfa gösterilmez; anlatım sırası ve sık gelen sorular için.
-
-### Anlatım sırası (45 dk)
-
-1. **Çerçeve (5 dk).** "Bugün yeni bir özellik öğrenmiyoruz; sekiz gündür kullandığımız
-   şeylerin altına bakıyoruz." Tabloyu göster: `Vec`, `String`, `Rc`, `split_at_mut`.
-   Soru sor: *"`Vec::push` sizce nasıl yazılmış?"*
-2. **`unsafe` ne DEĞİLDİR (5 dk).** Üç yanlış anlamayı baştan kes. Özellikle şunu:
-   **ödünç denetleyicisi kapanmıyor.** Sınıf bunu ezberlesin.
-3. **Ham pointer (10 dk).** Oluşturmak güvenli, dereference etmek değil — `E0133`.
-   Sarkan pointer demosunu çalıştır: kod derleniyor ve çalışıyor, çünkü okumuyoruz.
-4. **`split_at_mut` (15 dk) — dersin kalbi.** Önce güvenli hâlini yazdır, `E0499` alsın.
-   Cümleyi kur: *"Derleyici haksız değil, yetersiz. İki dilimin çakışmadığını ispat
-   edemiyor; biz biliyoruz."* Sonra `unsafe` sürümünü yaz. En sonda **std'nin kaynağını
-   aç** ve aynı satırları göster. Sınıfın "aa" dediği an burasıdır.
-5. **Global durum + `unsafe impl` + FFI (7 dk).** Hızlı geç: `static mut` kullanmayın,
-   `Atomic`/`OnceLock` var; `unsafe impl Send` sözü siz veriyorsunuz; `extern` her zaman
-   unsafe çünkü derleyici öteki tarafı görmüyor.
-6. **Kural (3 dk).** Beş maddeyi tahtaya yaz, dersi orada bitir.
-
-### Sınıftan gelecek sorular
-
-**"`unsafe` yazınca kod hızlanır mı?"**
-Hayır. Güvenli Rust zaten sıfır maliyetli. `unsafe` hız için değil, derleyicinin
-ispat edemediği şeyi ispat etmek için. Ölçmeden `unsafe`'e geçmek en yaygın hatadır.
-
-**"O zaman neden herkes `unsafe` kullanmıyor?"**
-Çünkü sözü tutmak zor. Derleyici kontrol etmeyi bıraktığı an, hata sizin ve sessiz
-oluyor — çökmüyor, yanlış çalışıyor.
-
-**"UB tam olarak ne?"**
-"Tanımsız davranış" = derleyicinin varsayımı bozuldu, artık hiçbir garanti yok. Program
-çökebilir, yanlış değer okuyabilir, ya da aylarca sorunsuz çalışıp müşteride patlayabilir.
-"Hata alırsınız" demek **değil**.
-
-**"C'de zaten hep böyle yazıyoruz, fark ne?"**
-Fark kapsam. C'de bütün program unsafe. Rust'ta unsafe blok 5 satır, gerisi güvenli —
-bir bellek hatası varsa o 5 satırda. Aramanız gereken yer belli.
-
-**"`unsafe fn` mi yazayım, içine `unsafe` blok mu koyayım?"**
-Blok. `unsafe fn` bütün gövdeyi işaretler ve çağıranı da `unsafe` yazmaya zorlar.
-Doğru tasarım: güvenli imza + içeride küçük `unsafe` blok + `// SAFETY:` yorumu.
-
-### Sarkarsa kes
-
-`unsafe impl Send`, FFI, doğrulama araçları. Kesme: `unsafe` ne değildir, ham pointer
-dereference, `split_at_mut` ve std karşılaştırması, beş kural.
-
-### Kendinize güvenmiyorsanız
-
-Bu dersi "ben de uzman değilim" diye açmakta sakınca yok — hatta iyi olur. Söylenecek
-dürüst cümle şu: *"Rust yazarken `unsafe` yazmayacaksınız. Ama kullandığınız her
-kütüphanenin içinde var, ve nasıl çalıştığını bilmek onlara güvenip güvenmeyeceğinizi
-belirler."*

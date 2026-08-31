@@ -3,8 +3,7 @@
 `Vtable-ve-Dispatch.pptx` sunumunun yazılı hâli. **Ders değildir**; Gün 6'nın beş dersi
 yerinde durur, bu ~20 dakikalık ek sunumdur.
 
-Buradaki bütün sayılar ölçülerek elde edildi (`g++` ve `rustc` çıktıları). Ölçüm kodu
-öğrenci deposunda değil: `../OYK2026-plan/slides/olcum/vtable-olcum.rs`.
+Buradaki bütün sayılar ölçülerek elde edildi (`g++` ve `rustc` çıktıları).
 
 ## 1. Önce kavram: ikisi de polimorfizm
 
@@ -139,6 +138,10 @@ void** vptr = *(void***)&v;   // -> 0x58e14e4e0d98
                                +--------------------+
 ```
 
+Şemanın sözle anlatımı: `VirtEnemy` nesnesinin **ilk 8 baytı** bir `vptr`'dir ve statik
+bellekteki vtable'ı gösterir; hemen ardından `hp` alanı gelir. Vtable'ın içinde sırayla
+`draw` ve yıkıcı fonksiyonun adresleri durur.
+
 Nesne polimorfik olduğunu **kendi içinde taşır**; kurucu çalışırken vptr bağlanır.
 Bedeli her nesnede +8 bayttır: bir milyon nesne = 8 MB fazladan.
 
@@ -177,13 +180,18 @@ size_of::<Option<Box<dyn Draw>>>() = 16 bayt   None bedava (niche)
                       +----------------------+
 ```
 
-Fat pointer'ı ikiye ayırıp bakabilirsiniz (`main.rs`'te var):
+Şemanın sözle anlatımı: `&dyn Draw` 16 bayttır ve iki işaretçiden oluşur. İlki `Enemy`
+verisini gösterir — o veri **saf**tır, içinde tablo işaretçisi yoktur. İkincisi
+`Draw for Enemy` vtable'ını gösterir; tablonun içinde sırayla `drop_in_place`, `size`,
+`align` ve `draw` metodunun adresi durur.
+
+Fat pointer'ı ikiye ayırıp bakabilirsiniz:
 
 ```
 veri adresi   = 0x7ffea93b7cec
-&e adresi     = 0x7ffea93b7cec    <- aynı
+&e adresi     = 0x7ffea93b7cec    (aynı adres)
 vtable adresi = 0x57b9697292d8
-ikinci Enemy  = 0x57b9697292d8    <- AYNI tablo paylaşılıyor
+ikinci Enemy  = 0x57b9697292d8    (AYNI tablo paylaşılıyor)
 ```
 
 Vtable **tip başına bir kez** üretilir; nesne sayısı artınca tablo çoğalmaz.

@@ -1,9 +1,8 @@
 # Gun 8 - Ders 1: Eszamanlilik, Thread ve Ownership
 
-Ders 1 blogunun ilk 20 dakikasi - sunum, sonra kod
+Gun 8 acilis sunumu
 
-> `Eszamanlilik-Thread-Ownership.pptx` dosyasinin markdown aynasi.
-> Duzenlemeyi sunum kaynagindan yapin: `OYK2026-plan/slides/uret_gun8.py`
+> `Eszamanlilik-Thread-Ownership.pptx` sunumunun metin hali.
 
 ---
 
@@ -12,8 +11,6 @@ Ders 1 blogunun ilk 20 dakikasi - sunum, sonra kod
 Eşzamanlılık, Thread ve Ownership
 
 Bilgisayarınızda 431 program çalışıyor. Çekirdek sayısı 16.
-
-> **Konusmaci notu.** Baslarken bu celiskiyi sorun: 431 program, 16 cekirdek. Nasil oluyor? Cevap bu 20 dakikanin tamami.
 
 ---
 
@@ -32,8 +29,6 @@ Peki digerleri?
 ```
 
 Cevap: hiçbiri sürekli çalışmıyor. İşletim sistemi hepsini sırayla, çok hızlı değiştiriyor.
-
-> **Konusmaci notu.** Sinifin kendi makinesinde denemesini isteyin, sayilar benzer cikar. Bu slayt gunun butun sorusunu ortaya koyuyor: paylasilan az sayida cekirdek, cok sayida is.
 
 ---
 
@@ -73,8 +68,6 @@ gerçekleşme biçimidir.
 
 Soru: nasıl HIZLANDIRIRIM?
 
-> **Konusmaci notu.** Klasik cumle: eszamanlilik bir YAPI meselesi, paralellik bir YURUTME meselesi. Tek cekirdekli bir telefon bile eszamanli calisir: muzik calarken ekrani ciziyor. Paralellik ise donanim ister. Her paralel program eszamanlidir; her eszamanli program paralel degildir.
-
 ---
 
 ### 4 - İşletim sistemi 431 süreci nasıl yönetiyor?
@@ -86,6 +79,8 @@ cekirdek 0'in zaman cizgisi:
 
   |--tarayici--|--muzik--|--derleyici--|--tarayici--|--terminal--|
        ~5 ms      ~5 ms       ~5 ms         ~5 ms        ~5 ms
+  (tek cekirdegin zaman cizgisi: her surec sirayla ~5 ms calisiyor,
+   sonra zamanlayici siradakine geciyor)
 
 Her degisimde ZAMANLAYICI (scheduler) devreye giriyor:
   1. calisan surecin register'larini kaydet
@@ -96,8 +91,6 @@ Buna BAGLAM DEGISTIRME (context switch) deniyor.
 ```
 
 Bu makinede iki thread arasında gidiş-dönüş ~14 µs ölçüldü. Bedava değil — ama 5 ms'lik dilimin yanında küçük.
-
-> **Konusmaci notu.** Anlatirken zaman cizgisini tahtaya cizin. Zaman dilimi (time slice) tipik olarak birkac milisaniye. Insan gozu bunu fark etmez, o yuzden her sey ayni anda calisiyor SANIRIZ. Baglam degistirme maliyeti bos degil: register kaydet/yukle, cache soguyor, MMU tablolari degisiyor. Surecler arasi gecis, thread'ler arasi gecisten PAHALI - cunku bellek haritasi da degisiyor.
 
 ---
 
@@ -119,8 +112,6 @@ CLONE_THREAD : ayni surecin parcasi ol
 
 Linux'ta süreç de thread de aynı çekirdek yapısıdır (task). Fark: hangi bayrakları paylaştıkları.
 
-> **Konusmaci notu.** Bu ciktiyi ben aldim, uydurma degil - sinifta canli da gosterebilirsiniz. Ogretici olan: thread ozel bir sey degil, sadece BELLEGI PAYLASAN bir surec. Linux'ta ikisi de task_struct. fork() bu bayraklari vermez, o yuzden ayri bellek alani cikar. stack_size satirina dikkat cekin: 2 MiB rakami burada, sistem cagrisinin icinde goruluyor.
-
 ---
 
 ### 6 - Thread'in üç hâli
@@ -136,8 +127,6 @@ BLOKE (blocked) — I/O bekliyor: ağ, disk, kilit. Çekirdeği BIRAKTI.
 Bloke thread çekirdek harcamaz — ama 2 MiB stack'ini tutmaya devam eder.
 
 10.000 bağlantı = 10.000 bloke thread = 20 GB. İşte async'in sebebi (Ders 4).
-
-> **Konusmaci notu.** Uc hali tahtaya cizin, oklarla baglayin. Anahtar nokta: bloke thread cekirdek harcamiyor, isletim sistemi yerine baskasini koyuyor - bu yuzden 1870 thread 16 cekirdekte rahatca duruyor, cogu bloke. AMA bellek harciyor. Ders 4'te async'in derdi tam olarak bu: beklemek icin thread harcamamak.
 
 ---
 
@@ -159,9 +148,11 @@ ikisi de yürütme akışı — fark neyi paylaştıkları
   +--------------------------------------------+
 ```
 
-İki SÜREÇ hiçbir şey paylaşmaz. Aynı sürecin iki THREAD'i heap'i paylaşır — bütün mesele burada.
+Şemanın sözle anlatımı: bir sürecin içinde kod, static alan ve heap **ortaktır** — `Box`,
+`Vec`, `String` verileri heap'te durur. Aynı sürecin her thread'inin ise **kendi stack'i ve
+kendi register'ları** vardır; onlar paylaşılmaz.
 
-> **Konusmaci notu.** Kritik cumle: thread'ler heap'i paylasir. Iki thread ayni Vec'e dokunabiliyor cunku Vec'in verisi heap'te. Stack'ler ayri, o yuzden yerel degiskenler cakismaz. Surecler arasinda paylasim yok - bu yuzden guvenli ama iletisim pahali (IPC gerekir). Thread ucuz iletisim verir, bedeli: veri yarisi riski. Gun 2'deki bellek haritasinin ustune bunu koyun.
+İki SÜREÇ hiçbir şey paylaşmaz. Aynı sürecin iki THREAD'i heap'i paylaşır — bütün mesele burada.
 
 ---
 
@@ -193,8 +184,6 @@ Bu makinedeki çekirdek
 
 16
 
-> **Konusmaci notu.** 82 mikrosaniye kucuk gorunuyor ama 1000 kucuk is icin 82 ms eder; isin kendisi 1 ms ise zarardasiniz. Ders 1'de bunu olcerek gosterecegiz. Ayrica 10.000 baglanti icin 10.000 thread acamazsiniz: 2 MiB x 10.000 = 20 GB. Ders 4'te async tam bu yuzden var.
-
 ---
 
 ### 9 - Paralellik de thread mi kullanıyor?
@@ -212,8 +201,6 @@ Ve paralellik illa thread gerektirmez: SIMD (tek çekirdek, tek komut çok veri)
    GPU, ya da ayrı süreçler de paralellik verir.
 
 Rust'ta: thread::spawn -> OS dağıtır · rayon -> thread havuzu · async -> tek thread'de eşzamanlılık.
-
-> **Konusmaci notu.** Bu soruyu sinif mutlaka soruyor. Net cevap: paralellik icin bir yurutme birimi lazim ve o birim genelde thread. Ama iliski tek yonlu degil: thread actiginiz an paralellik garanti degil - cekirdek bosta degilse sirada bekler. Async ornegi onemli: Ders 4'te tek thread'de uc isi es zamanli yurutecegiz, hicbir paralellik yok ama sure ucte bire iniyor.
 
 ---
 
@@ -233,8 +220,6 @@ Go farklı: goroutine'ler M:N — runtime binlerce goroutine'i az sayıda
 
 O modeli isterseniz kütüphaneden eklersiniz: tokio — Ders 4.
 
-> **Konusmaci notu.** Bu slayt 'zero-cost abstraction' felsefesinin thread'lerdeki karsiligi: Rust size isletim sisteminin verdigini verir, ustune bedel koymaz. Go karsilastirmasi: goroutine ucuz ama runtime zorunlu. Rust ikisini ayirmis: thread = OS, hafif gorev = tokio task.
-
 ---
 
 ### 11 - spawn ve join
@@ -253,8 +238,6 @@ let sonuc = handle.join().unwrap();  // bekle + degeri al
 ```
 
 join() çağırmazsanız main bitince thread yarıda kesilebilir. Çıktı sırası GARANTİ DEĞİL.
-
-> **Konusmaci notu.** spawn bir JoinHandle dondurur. join iki is yapar: bekler ve donen degeri verir. unwrap orada cunku thread panikleyebilir - join Result doner. Ciktinin sirasiz olmasi bir hata degil, tanimin kendisi: zamanlayici karar veriyor.
 
 ---
 
@@ -276,8 +259,6 @@ sayac += 1   aslinda uc adim:   oku / arttir / yaz
 
 Bir artış kayboldu. HER ZAMAN olmuyor — testlerde geçer, üretimde patlar.
 
-> **Konusmaci notu.** Bu tabloyu tahtaya cizin. Anahtar cumle: hata zamanlamaya bagli, tekrarlanamiyor. Hata ayiklayici eklemek zamanlamayi degistirip hatayi kacirir (heisenbug). Cozum test etmek degil, MUMKUN OLMAMASINI saglamak.
-
 ---
 
 ### 13 - Rust'ın cevabı: `move`
@@ -297,8 +278,6 @@ println!("{:?}", ekipman);  // E0382: artik senin degil
 
 ekipman main'de düşebilir, thread hâlâ çalışıyor olabilir → sarkan referans.
 
-> **Konusmaci notu.** Haftanin en tatmin edici bagi: Gun 2'de ogrendikleri sarkan referans kurali bugun thread'de karsilarina cikiyor. C'de bu kod DERLENIR ve rastgele coker. Rust'ta derlenmez. Ayni verinin iki sahibi olamadigi icin veri yarisinin yarisi zaten kapandi.
-
 ---
 
 ### 14 - `move` tam olarak ne yapıyor?
@@ -316,8 +295,6 @@ println!("{}", sayi);      // CALISIR - kopyalandi, tasinmadi
 ```
 
 Taşımak istemiyorsanız iki yol var: thread::scope ile ödünç alın, ya da Arc ile paylaşın.
-
-> **Konusmaci notu.** Uc noktayi vurgulayin. BIR: move sahipligi devreder, geri donusu yok - main artik o veriye dokunamaz. IKI: Copy tipler istisna degil, sadece kopyalaniyorlar; move yine oluyor ama orijinal yerinde kaliyor. UC: move 'kac kez cagrilir'i belirlemez - move'lu closure hala Fn olabilir, iki kez cagrilabilir. Tasimak istemiyorsaniz thread::scope var: scope icindeki thread'ler scope bitmeden once bittigi icin derleyici odunc almaya izin veriyor. Kod seansinda ikisini de yazacagiz.
 
 ---
 
@@ -361,8 +338,6 @@ tutuluyor ve thread-safe
 
 değil.
 
-> **Konusmaci notu.** Ikisi de MARKER trait: govdesi yok, derleyici otomatik cikariyor. Ogrenciler bu isimleri hata mesajlarinda gorecek: 'cannot be sent between threads safely'. Gun 7'de Rc<RefCell<T>> yazdik; Ders 2'de ayni yapiyi Arc<Mutex<T>> olarak yazacagiz. Sebep bu slayt.
-
 ---
 
 ### 16 - Rust ne söz veriyor, ne vermiyor
@@ -378,8 +353,6 @@ SÖZ DEĞİL: yanlış sıra, eksik kilit, mantık hatası hâlâ sizin sorununu
 SÖZ DEĞİL: paralel kod otomatik HIZLI değil — thread açmanın bedeli var.
 
 "Fearless concurrency" = korkmadan deneyebilirsiniz; hatasız demek değil.
-
-> **Konusmaci notu.** Rust bir hata SINIFINI kapatiyor - en sinsi olanini. Digerleri duruyor. Ders 2'de deadlock'u, Ders 1'de paralelligin ne zaman zarar ettigini olcerek gorecegiz.
 
 ---
 
@@ -415,13 +388,8 @@ Rust: mpsc kanalları
 
 Ders 3
 
-> **Konusmaci notu.** Go'nun slogani: 'Bellegi paylasarak iletisme; ileterek paylas.' Rust ikisine de izin veriyor. Farki: kanala gonderdiginiz veri ELINIZDE KALMIYOR - ownership bunu garanti ediyor, bu yuzden kanalda veri yarisi imkansiz.
-
 ---
 
 ### 18 - Şimdi thread yazalım.
 
 thread::spawn · move closure · thread::scope · ve paralelliğin ne zaman zarar ettiğini ölçmek
-
-> **Konusmaci notu.** Kod seansina geciyoruz: Ders 1 main.rs.
-

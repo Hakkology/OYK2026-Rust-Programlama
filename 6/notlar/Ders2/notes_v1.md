@@ -30,10 +30,10 @@ Java'nın `interface`'ine benziyor, ama iki büyük farkı var:
 İsteyen ezer, istemeyen bedava alır:
 
 ```
-Konak-Karsiyaka hatti kalkiyor                      ← varsayılan gövde
-Funikuler hatti kalkiyor                            ← varsayılan gövde
-M1 Fahrettin Altay: 5 vagon, kapilar kapaniyor      ← ezilmiş
-T1 Konak: saga dikkat, tramvay geciyor              ← ezilmiş
+Konak-Karsiyaka hatti kalkiyor   (varsayılan gövde)
+Funikuler hatti kalkiyor   (varsayılan gövde)
+M1 Fahrettin Altay: 5 vagon, kapilar kapaniyor   (ezilmiş)
+T1 Konak: saga dikkat, tramvay geciyor   (ezilmiş)
 ```
 
 Dikkat edilecek iki şey:
@@ -173,8 +173,8 @@ fn pick(rush: bool) -> Box<dyn Vehicle> {
 | çözülme | derleme zamanı | çalışma zamanı |
 | kod boyutu | her tip için ayrı kopya | tek kopya |
 | çağrı maliyeti | sıfır, inline olabilir | bir pointer atlaması |
-| heterojen liste | ✗ | ✓ |
-| dönüşte if/else | ✗ | ✓ |
+| heterojen liste | yok | var |
+| dönüşte if/else | yok | var |
 | derleme süresi | uzar | kısalır |
 
 Ders 1'de monomorphization'ın karşıtı diye geçtiğimiz şey tam olarak bu sütun.

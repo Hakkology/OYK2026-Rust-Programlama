@@ -57,6 +57,31 @@ unsafe fn swap_raw(a: *mut i32, b: *mut i32) {
     *b = temp;
 }
 
+// Ornek 2: sinir kontrolunu ATLAYAN okuma. std'deki get_unchecked ile ayni fikir.
+// SAFETY (cagiranin sozu): index < slice.len() olmali.
+unsafe fn read_unchecked(slice: &[i32], index: usize) -> i32 {
+    *slice.as_ptr().add(index)
+}
+
+// Ayni isin GUVENLI sarmalayicisi: sinir kontrolu unsafe'in disinda.
+fn read_or_zero(slice: &[i32], index: usize) -> i32 {
+    if index < slice.len() {
+        // SAFETY: index < len oldugunu hemen yukarida dogruladik.
+        unsafe { read_unchecked(slice, index) }
+    } else {
+        0
+    }
+}
+
+// Ornek 3: ham pointer uzerinden YAZMA.
+// SAFETY (cagiranin sozu): ptr gecerli olmali ve arkasinda en az len tane
+// yazilabilir i32 bulunmali.
+unsafe fn fill(ptr: *mut i32, len: usize, value: i32) {
+    for i in 0..len {
+        *ptr.add(i) = value;
+    }
+}
+
 // ---------------------------------------------------------------
 // 5c) UNION - besinci super guc
 // ---------------------------------------------------------------
@@ -238,6 +263,22 @@ fn main() {
     println!("  sonra: x={} y={}", x, y);
     // swap_raw(&mut x, &mut y);
     //   E0133: call to unsafe function is unsafe and requires unsafe block
+
+    println!("-- 5b-2) sinir kontrolunu atlayan okuma --");
+    let veri = [10, 20, 30];
+    // SAFETY: 1 < 3 oldugunu biliyoruz.
+    println!("  read_unchecked(1) = {}", unsafe { read_unchecked(&veri, 1) });
+    println!("  read_or_zero(1)   = {}   (guvenli sarmalayici)", read_or_zero(&veri, 1));
+    println!("  read_or_zero(99)  = {}   (sinir disinda, panik yok)", read_or_zero(&veri, 99));
+    // unsafe { read_unchecked(&veri, 99) } -> TANIMSIZ DAVRANIS. Cagirmiyoruz.
+
+    println!("-- 5b-3) ham pointer uzerinden yazma --");
+    let mut hedef = [0i32; 5];
+    // SAFETY: hedef 5 elemanlik gecerli bir dizi, uzunlugu dogru veriyoruz.
+    unsafe { fill(hedef.as_mut_ptr(), hedef.len(), 7) };
+    println!("  fill(..., 7) sonrasi: {:?}", hedef);
+    // Uzunlugu YANLIS verseydik (ornegin 50) komsu bellegi ezerdik.
+    // Derleyici bunu kontrol etmiyor; soz sizde.
 
     println!("-- 5c) union: ayni bellek, iki okuma --");
     let mut u = IntOrFloat { i: 1_065_353_216 };

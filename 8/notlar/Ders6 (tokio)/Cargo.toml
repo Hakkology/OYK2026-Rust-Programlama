@@ -1,0 +1,9 @@
+[package]
+name = "ders6_tokio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# "full" butun ozellikleri acar: zamanlayici, zamanlayici, kanallar, IO...
+# Gercek projede ihtiyaciniz kadarini secin: features = ["rt-multi-thread", "macros", "time"]
+tokio = { version = "1", features = ["full"] }

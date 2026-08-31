@@ -112,7 +112,7 @@ Tersi doğru değildir: üst modül, alt modülün yalnızca `pub` olanını gö
 
 ## `mod` ile `use` aynı şey değil
 
-Sınıfın en çok karıştırdığı ikili budur:
+En çok karıştırılan ikili budur:
 
 | | Ne yapar |
 |---|---|

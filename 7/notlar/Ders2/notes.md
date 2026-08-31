@@ -8,8 +8,8 @@ dilimleyerek.
 > **Lifetime bir açıklamadır, emir değil.**
 > Ömrü siz uzatmıyorsunuz; derleyiciye "bu referanslar şu kadar yaşar" diye anlatıyorsunuz.
 
-Sınıfın en yaygın yanlış anlaması `'a`'nın bir şeyi "uzattığını" sanmak. Uzatmıyor;
-sadece ilişkiyi yazıyor.
+En yaygın yanlış anlama `'a`'nın bir şeyi "uzattığını" sanmaktır. Uzatmıyor; sadece
+ilişkiyi yazıyor.
 
 ## Somut ömür (concrete lifetime)
 
@@ -208,7 +208,7 @@ fn longer_statement(a: &str, b: &str) -> &str      // E0106
 Kural 1 iki ayrı ömür verdi, kural 2 işlemedi (tek girdi değil), kural 3 işlemedi
 (`&self` yok). Geriye elle yazmak kalıyor.
 
-**Sınıfa sorun:** `first_word` neden çalışıyor da `longer_statement` çalışmıyor? Cevap
+Kendinize sorun: `first_word` neden çalışıyor da `longer_statement` çalışmıyor? Cevap
 2. kural — birinde tek girdi var, diğerinde iki.
 
 ## NLL — ömür son **kullanımda** biter

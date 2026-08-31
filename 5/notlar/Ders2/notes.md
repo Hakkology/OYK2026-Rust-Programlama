@@ -44,7 +44,7 @@ Ok(Reading::new(parse_field(a)?, parse_field(b)?))
 ## `?` iki yerde takılır — mesajları ayırt edin
 
 `?` iki iş yapıyordu: erken dönüş ve tip dönüşümü. İkisi de ayrı ayrı takılabilir ve
-öğrenciye ikisi de "`?` çalışmıyor" diye görünür. Hâlbuki derleyici hangisi olduğunu
+ilk bakışta ikisi de "`?` çalışmıyor" gibi görünür. Hâlbuki derleyici hangisi olduğunu
 açıkça söylüyor.
 
 ### Engel 1 — kap uyuşmazlığı: `Result` mi `Option` mu

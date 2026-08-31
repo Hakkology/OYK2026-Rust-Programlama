@@ -135,7 +135,7 @@ Gün 2'deki sarkan referansın ta kendisi. Çözüm: sahiplenen sürümü dönd�
 
 ## `'static`'in iki anlamı
 
-Sınıfın en çok karıştırdığı yer burası.
+En çok karıştırılan yer burasıdır.
 
 | | ne demek |
 |---|---|

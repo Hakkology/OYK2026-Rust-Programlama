@@ -294,7 +294,7 @@ struct LeakyDetective { case: RefCell<Option<Rc<LeakyCase>>> }   // sahiplik VAR
 
 ## Karar sırası
 
-Sınıf bunu ezberlemesin, **sırayla sorsun**:
+Ezberlemeyin, **sırayla sorun**:
 
 1. **Referans (`&T`) yeter mi?** → Yeterse başka hiçbir şey kullanmayın. Çoğu kod burada biter.
 2. **Heap'te olması ya da boyutunun bilinmemesi mi gerekiyor?** → `Box<T>`

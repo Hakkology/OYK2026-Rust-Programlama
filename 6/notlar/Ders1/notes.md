@@ -132,9 +132,9 @@ rustc main.rs && nm -C main | grep strongest
 ```
 main::strongest_f64
 main::strongest_i32
-main::strongest        ← i32
-main::strongest        ← f64
-main::strongest        ← char
+main::strongest   (i32)
+main::strongest   (f64)
+main::strongest   (char)
 ```
 
 Üç ayrı `strongest` — üç ayrı makine kodu. Yani **çalışma zamanında generic diye bir şey

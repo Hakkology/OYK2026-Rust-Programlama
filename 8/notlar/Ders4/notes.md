@@ -32,8 +32,8 @@ println!("{}", block_on(is));        // iş ancak şimdi başlıyor
 `async fn` çağırmak **hiçbir şey çalıştırmaz**; size bir `Future` verir. `.await`
 edilene ya da bir runtime'a verilene kadar tek satır işlemez.
 
-> JavaScript'te `Promise` oluşturunca iş **hemen** başlar. Bu farkı bilerek gelin;
-> sınıfın en çok şaşırdığı yer burası.
+> JavaScript'te `Promise` oluşturunca iş **hemen** başlar. Bu fark şaşırtıcıdır; akılda
+> tutun.
 
 ## Runtime dediğimiz şey
 
@@ -149,4 +149,4 @@ async fn main() {
    deadlock riski. → `tokio::sync::Mutex`
 3. **Fonksiyon rengi**: `async fn`'i yalnızca async bağlamdan çağırabilirsiniz. Kod
    tabanı ikiye bölünür (`fn` dünyası / `async fn` dünyası). Async modelinin en çok
-   eleştirilen yanı budur; dürüst olun, sınıf bunu zaten hissedecek.
+   eleştirilen yanı budur.
